@@ -291,7 +291,7 @@ const LINSE = {
 };
 const FRAGE = () => S.level === 'stark' ? 'Jeder Denkanstoss endet mit einer Frage, davor höchstens ein kurzer Bezugssatz.' : '';
 const TASK = {
-  karte: d => `AUFGABE: Erstelle eine Landkarte des Dokuments für Leseziel und Linse der Person. Gib für jeden Abschnitt (gleiche id wie in den Daten) einen kurzen Titel (höchstens 6 Wörter) und im Feld "linse" ${LINSE[S.level]}. Fasse den Text nicht zusammen: Die Person soll das Wichtige selbst lesen. Gib dazu höchstens ${Math.min(6, Math.max(1, Math.ceil(d.abschnitte.length / 3)))} Denkanstösse zu Abschnitten, bei denen sich für das Leseziel genaueres Hinsehen lohnt. Art: eine von Annahme, Alternative, Gegenargument, Spannung, Deutung, Frage. ${FRAGE()}
+  karte: d => `AUFGABE: Erstelle eine Landkarte des Dokuments für Leseziel und Linse der Person. Gib für jeden Abschnitt (gleiche id wie in den Daten) einen kurzen Titel (höchstens 6 Wörter) und im Feld "linse" ${LINSE[S.level]}. Fasse den Text nicht zusammen: Die Person soll das Wichtige selbst lesen. ${d.teil ? `Die Daten enthalten nur Teil ${d.teil} des Dokuments; "gliederung" zeigt die Überschriften des ganzen Dokuments als Zusammenhang. Gib Titel und Linse nur für die Abschnitte in "abschnitte". ` : ''}Gib dazu höchstens ${d.max_anstoesse || Math.min(6, Math.max(1, Math.ceil(d.abschnitte.length / 3)))} Denkanstösse zu Abschnitten, bei denen sich für das Leseziel genaueres Hinsehen lohnt. Art: eine von Annahme, Alternative, Gegenargument, Spannung, Deutung, Frage. ${FRAGE()}
 SCHEMA: {"abschnitte":[{"id":"s1","titel":"…","linse":"…"}],"anstoesse":[{"id":"s3","art":"Annahme","text":"…","schritt":"…"}]}`,
   abgleich: () => `AUFGABE: Die Person hat den Text gelesen und ihre Kernpunkte formuliert. Vergleiche Kernpunkte und Notizen mit dem Text im Hinblick auf ihr Leseziel. Schreibe ihre Kernpunkte nicht neu und liefere keine eigene Zusammenfassung. Sprich sie in allen Feldern mit «du» an.
 "getroffen": 1 bis 3 konkrete Punkte, die sie gut erfasst hat, je ein Satz in der Du-Form, zum Beispiel «Du hast …» (ehrlich, nur wenn zutreffend).
@@ -745,10 +745,31 @@ async function run(b, fn) {
 }
 
 /* ---------- Aktionen ---------- */
-function payloadSections() {
-  const all = S.doc.sections, total = all.reduce((a, s) => a + s.text.length, 0), LIM = 60000;
-  const per = total > LIM ? Math.floor(LIM / all.length) : Infinity;
-  return { cut: total > LIM, secs: all.map(s => ({ id: s.id, ueberschrift: s.head || '', text: s.text.length > per ? s.text.slice(0, per) + ' […]' : s.text })) };
+/* Lange Dokumente: Die Landkarte entsteht in Teilen von höchstens PART Zeichen, ohne zu kürzen.
+   Wo das ganze Dokument auf einmal nötig ist (Abgleich), wird auf LIM Zeichen gekürzt: Abschnitte mit
+   eigenen Notizen zuerst vollständig, die übrigen anteilig nach Länge. */
+const LIM = 60000, PART = 40000;
+const docLen = () => S.doc.sections.reduce((a, s) => a + s.text.length, 0);
+const secPayload = (s, max) => ({ id: s.id, ueberschrift: s.head || '', text: s.text.length > max ? s.text.slice(0, max) + ' […]' : s.text });
+function payloadSections(prefer) {
+  const all = S.doc.sections, total = docLen();
+  if (total <= LIM) return { cut: false, secs: all.map(s => secPayload(s, Infinity)) };
+  const pref = new Set(prefer || []), budget = {};
+  let left = LIM;
+  all.filter(s => pref.has(s.id)).forEach(s => { budget[s.id] = Math.min(s.text.length, Math.max(0, Math.min(left, LIM / 2))); left -= budget[s.id]; });
+  const rest = all.filter(s => !pref.has(s.id)), restLen = rest.reduce((a, s) => a + s.text.length, 0) || 1;
+  rest.forEach(s => { budget[s.id] = Math.max(200, Math.floor(left * s.text.length / restLen)); });
+  return { cut: true, secs: all.map(s => secPayload(s, budget[s.id])) };
+}
+function mapParts() {
+  const parts = []; let cur = [], len = 0;
+  S.doc.sections.forEach(s => {
+    const l = Math.min(s.text.length, PART);
+    if (cur.length && len + l > PART) { parts.push(cur); cur = []; len = 0; }
+    cur.push(s); len += l;
+  });
+  if (cur.length) parts.push(cur);
+  return parts;
 }
 function addProv(mode, list, src) {
   const ids = new Set(mode === 'lesen' ? S.doc.sections.map(s => s.id) : S.w.parts.map(p => p.id));
@@ -757,28 +778,43 @@ function addProv(mode, list, src) {
     S.prov.push({ id: uid('k'), mode, src, sec: ids.has(a.id) ? a.id : 'gesamt', art: String(a.art || 'Denkanstoss'), text: String(a.text), schritt: String(a.schritt || ''), status: 'offen', grund: '', neu: true });
   });
 }
-async function doMap() {
+async function doMap(b) {
   if (S.level !== 'leicht' && words(S.purpose) < 3) throw { message: 'Formuliere zuerst kurz dein Leseziel, ein Satz genügt. Es bestimmt, worauf die Landkarte achtet.' };
-  const { secs, cut } = payloadSections();
-  const r = await ai('karte', { leseziel: S.purpose || 'nicht angegeben', linse: S.lens || 'keine besondere', abschnitte: secs });
-  S.map = {};
-  arr(r.abschnitte).forEach(a => { if (a && a.id) S.map[a.id] = { titel: String(a.titel || ''), linse: String(a.linse || '') }; });
+  const base = { leseziel: S.purpose || 'nicht angegeben', linse: S.lens || 'keine besondere' };
+  const parts = docLen() > LIM ? mapParts() : [S.doc.sections];
+  const n = S.doc.sections.length, map = {}, prov = [];
+  const gliederung = parts.length > 1 ? S.doc.sections.map((s, i) => s.head || 'Abschnitt ' + (i + 1)) : null;
+  let fail = null;
+  for (let i = 0; i < parts.length; i++) {
+    if (parts.length > 1 && b && b.isConnected) b.textContent = 'Teil ' + (i + 1) + ' von ' + parts.length + ' …';
+    const d = Object.assign({}, base, { abschnitte: parts[i].map(s => secPayload(s, PART)) });
+    if (gliederung) Object.assign(d, { teil: (i + 1) + ' von ' + parts.length, gliederung, max_anstoesse: Math.max(1, Math.round(6 * parts[i].length / n)) });
+    try {
+      const r = await ai('karte', d);
+      arr(r.abschnitte).forEach(a => { if (a && a.id) map[a.id] = { titel: String(a.titel || ''), linse: String(a.linse || '') }; });
+      prov.push(...arr(r.anstoesse));
+    } catch (e) { fail = { e, teil: i + 1 }; break; }
+  }
+  if (fail && !Object.keys(map).length) throw fail.e;
+  S.map = Object.assign(fail ? S.map : {}, map);
   S.prov = S.prov.filter(p => !(p.mode === 'lesen' && p.src === 'karte' && p.status === 'offen'));
-  addProv('lesen', r.anstoesse, 'karte');
+  addProv('lesen', prov, 'karte');
   save(); render();
-  msg(cut ? 'Landkarte erstellt. Das Dokument ist lang: Die KI sah pro Abschnitt nur den Anfang.' : 'Landkarte erstellt. Lies die Abschnitte, die für dein Ziel zählen, selbst.');
+  if (fail) throw { message: 'Die Landkarte ist unvollständig: Teil ' + fail.teil + ' von ' + parts.length + ' kam nicht zurück. ' + ((fail.e && fail.e.message) || '') + ' Versuch es nochmals.' };
+  msg(parts.length > 1 ? 'Landkarte in ' + parts.length + ' Teilen erstellt, die KI sah den ganzen Text. Lies die Abschnitte, die für dein Ziel zählen, selbst.' : 'Landkarte erstellt. Lies die Abschnitte, die für dein Ziel zählen, selbst.');
 }
 async function doCompare() {
+  let pl;
   const min = S.level === 'leicht' ? 5 : 25;
   if (words(S.kern) < min) throw { message: S.level === 'leicht' ? 'Schreib zuerst ein paar Stichworte zu deinen Kernpunkten.' : 'Schreib zuerst deine Kernpunkte in eigenen Worten, etwa drei, vier Sätze. Der Abgleich hilft erst, wenn es etwas zu vergleichen gibt.' };
-  const r = await ai('abgleich', { leseziel: S.purpose, kernpunkte: S.kern, notizen: S.notes.map(n => ({ abschnitt: n.sec, stelle: n.quote, notiz: n.text })), abschnitte: payloadSections().secs });
+  const r = await ai('abgleich', { leseziel: S.purpose, kernpunkte: S.kern, notizen: S.notes.map(n => ({ abschnitt: n.sec, stelle: n.quote, notiz: n.text })), abschnitte: (pl = payloadSections(S.notes.map(n => n.sec))).secs });
   S.cmp = { getroffen: arr(r.getroffen).map(String), frage: String(r.frage || '') };
   S.prov = S.prov.filter(p => !(p.src === 'abgleich' && p.status === 'offen'));
   addProv('lesen', arr(r.luecken).map(x => Object.assign({}, x, { art: 'Lücke' })), 'abgleich');
   addProv('lesen', arr(r.lesarten).map(x => Object.assign({}, x, { art: 'Andere Lesart' })), 'abgleich');
   save(); render();
   const f = document.getElementById('sec-fazit'); if (f) f.scrollIntoView({ block: 'start' });
-  msg('Abgleich fertig. Lücken und andere Lesarten stehen am Rand der betreffenden Abschnitte.');
+  msg('Abgleich fertig. Lücken und andere Lesarten stehen am Rand der betreffenden Abschnitte.' + (pl.cut ? ' Das Dokument ist lang: Die KI sah Abschnitte mit deinen Notizen ganz, die übrigen gekürzt.' : ''));
 }
 async function doDraft(id) {
   const p = part(id);
@@ -889,7 +925,7 @@ const H = {
     if (!S.sample && await dialog({ title: 'Neu beginnen?', text: 'Dokument, Notizen, Denkanstösse und dein Text werden aus dieser Werkstatt gelöscht.', ok: 'Neu beginnen' }) === null) return;
     S = blank(S.level); save(); render(); window.scrollTo(0, 0);
   },
-  map: b => run(b, doMap),
+  map: b => run(b, () => doMap(b)),
   compare: b => run(b, doCompare),
   goto(b) { const el = document.getElementById('sec-' + b.dataset.sec); if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); },
   async addnote(b) {
