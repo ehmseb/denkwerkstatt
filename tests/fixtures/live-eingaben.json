@@ -1,0 +1,36 @@
+{
+  "_hinweis": "Eingaben für tests/live_check.py. Die Kernpunkte lassen absichtlich den Boden als Speicher und den Albedo-Effekt aus. Abschnitt 2 hat Stichworte ohne Beispiel, Abschnitt 1 einen Entwurf mit einer zu pauschalen Aussage.",
+  "lesen": {
+    "leseziel": "Ich will entscheiden, ob dieser Text für eine Doppellektion zu Fotosynthese und Klima in der 3. Klasse taugt und wo SchülerInnen kritisch nachfragen sollten.",
+    "linse": "Welche Aussagen sind belegt, welche nur behauptet?",
+    "kernpunkte": "Bäume binden über die Fotosynthese CO2 und bauen den Kohlenstoff ins Holz ein, eine grosse Buche speichert etwa so viel wie eine Person pro Jahr ausstösst. Junge Wälder nehmen pro Jahr mehr auf als alte, und Holz gibt den Kohlenstoff je nach Nutzung früher oder später wieder ab. Eine ETH-Studie meinte, eine Billion Bäume könnten zwei Drittel der bisherigen Emissionen aufnehmen, andere Forschende halten das für zu hoch. Für den Unterricht ist die Studie ein guter Anlass, über Aufforstung zu diskutieren."
+  },
+  "schreiben": {
+    "titel": "Können Bäume das Klima retten?",
+    "ziel": "Die SchülerInnen verstehen, warum Aufforstung hilft, aber die Senkung der Emissionen nicht ersetzt, und begründen dazu eine eigene Position.",
+    "publikum": "3. Klasse Gymnasium, Grundlagenfach Biologie",
+    "kern": "Wälder speichern viel Kohlenstoff, aber wie viel und wie lange, hängt von Standort, Boden und Nutzung ab.",
+    "parts": [
+      {
+        "h": "Einstieg: eine Billion Bäume",
+        "stich": "- ETH-Studie 2019, 900 Mio. Hektaren, eine Billion Bäume\n- Schlagzeile: Bäume pflanzen rettet das Klima\n- Frage an die Klasse: Stimmt das?",
+        "text": "Im Jahr 2019 machte eine Studie der ETH Zürich Schlagzeilen: Auf der Erde hätte eine Billion zusätzlicher Bäume Platz. Diese Bäume würden so viel Kohlenstoffdioxid aufnehmen, dass der Klimawandel damit gelöst wäre. Viele Zeitungen schrieben deshalb, Bäume pflanzen sei die beste Klimamassnahme überhaupt. Doch ist das wirklich so einfach?"
+      },
+      {
+        "h": "Wie der Wald Kohlenstoff speichert",
+        "stich": "- Fotosynthese: CO2 wird zu Glucose, dann zu Holz\n- ein Teil geht durch Zellatmung wieder verloren\n- Boden speichert oft mehr als die Bäume\n- Beispiel fehlt noch",
+        "text": ""
+      },
+      {
+        "h": "Wo die Rechnung nicht aufgeht",
+        "stich": "- Savannen und Grasland sind kein leerer Platz\n- Albedo: dunkler Wald statt heller Schnee\n- Brände, Käfer, Trockenheit setzen Kohlenstoff frei",
+        "text": ""
+      },
+      {
+        "h": "Deine Position",
+        "stich": "- Auftrag: Stellung nehmen in 5 Sätzen\n- mindestens ein Gegenargument aufnehmen",
+        "text": ""
+      }
+    ]
+  }
+}

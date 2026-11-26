@@ -1,0 +1,9 @@
+{
+  "name": "denkwerkstatt-tests",
+  "private": true,
+  "description": "Lokale Kopien der CDN-Bibliotheken für die End-to-End-Tests",
+  "devDependencies": {
+    "mammoth": "1.8.0",
+    "pdfjs-dist": "3.11.174"
+  }
+}
