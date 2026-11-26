@@ -15,6 +15,7 @@ server.js           kleiner Server: liefert public/ aus und leitet KI-Anfragen w
 .env.example        Vorlage für die Umgebungsvariablen des Servers
 .github/workflows/pages.yml   veröffentlicht public/ auf GitHub Pages
 tests/              End-to-End-Test mit simulierten KI-Antworten (python tests/e2e.py)
+                    und Echttest mit echtem Modell (python tests/live_check.py)
 docs/               Übergabebericht, Referenz des Skills «denkpartner», Startprompt für Claude Code
 CLAUDE.md           Arbeitsregeln für Claude Code
 ```

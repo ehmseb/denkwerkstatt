@@ -7,6 +7,7 @@ Die Denkwerkstatt ist ein Lese- und Schreibwerkzeug mit Denkanstössen am Rand, 
 - `public/index.html`: das ganze Werkzeug in **einer** Datei (HTML, CSS, JavaScript), ohne Build-Schritt.
 - `server.js`: kleiner Node-Server ohne Abhängigkeiten. Liefert `public/` aus und leitet KI-Anfragen weiter (`/api/config`, `/api/llm`). Schlüssel nur aus Umgebungsvariablen.
 - `tests/e2e.py`: End-to-End-Test aller drei Verbindungsarten mit simulierten Antworten. `tests/mock_upstream.js`: simulierter Anbieter.
+- `tests/live_check.py`: Echttest mit einem echten Modell und dem Text aus `tests/fixtures/`. Läuft lokal mit Schlüssel aus der Shell oder über den Workflow `.github/workflows/live-check.yml` (nur von Hand, Schlüssel als Repository-Secret). Rohantworten nie ins Repo.
 - `.github/workflows/pages.yml`: veröffentlicht `public/` bei jedem Push auf `main` nach https://ehmseb.github.io/denkwerkstatt/.
 
 ## Feste Vorgaben

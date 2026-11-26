@@ -14,6 +14,7 @@ Umgebungsvariablen (Schlüssel nie ins Repo):
   LIVE_APP_PASSWORD Zugangspasswort für LIVE_SERVER_URL
   LIVE_LEVELS       Vorgabe: leicht,mittel,stark
   LIVE_OUT          Ordner für Rohantworten, Vorgabe tests/.live (nicht im Repo)
+  LIVE_PRINT_RAW    1: Rohantworten zusätzlich ausgeben (für GitHub Actions)
 
 Start:  python tests/live_check.py
 Exit-Code: 0 alle Prüfungen bestanden, 1 Regelverstösse, 2 Lauf abgebrochen.
@@ -161,6 +162,8 @@ async def step(pg, level, name, action):
     ok = all(v is not False for k, v in ev.items() if k not in ('n', 'details', 'json'))
     print(f'  {"ok    " if ok else "REGEL "}  {level:6} {name:22} {dt:5.1f} s  {ev["n"]} Anstösse' + ('' if ev['json'] else '  (JSON nur tolerant lesbar)' if ev['json_tolerant'] else '  (kein JSON)'))
     for d in ev['details']: print('            ' + d[:160])
+    if os.environ.get('LIVE_PRINT_RAW') == '1':
+        print('            ROH ' + json.dumps({'task': req.get('task'), 'daten': req.get('user', '').split('DATEN:')[-1].strip()[:3000], 'antwort': raw}, ensure_ascii=False))
 
 async def run_level(browser, base, level):
     print(f'Stufe {level}')
@@ -233,6 +236,9 @@ async def main():
     (OUT / f'{stamp}.json').write_text(json.dumps({'meta': meta, 'results': RESULTS}, ensure_ascii=False, indent=1), encoding='utf-8')
     (OUT / f'{stamp}-tabelle.md').write_text(table() + '\n', encoding='utf-8')
     print('\n' + table())
+    if os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+            f.write(f"## Echttest {PROVIDER} / {MODEL} (schnell: {FAST})\n\n" + table() + '\n')
     print(f'\nRohantworten: {OUT / (stamp + ".json")}')
     if any('error' in r for r in RESULTS): sys.exit(2)
     bad = [r for r in RESULTS if any(v is False for k, v in r['eval'].items() if k not in ('n', 'details', 'json'))]
