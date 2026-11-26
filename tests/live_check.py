@@ -67,9 +67,21 @@ def all_strings(o):
         for v in o: yield from all_strings(v)
 
 DASH = re.compile(r'[\u2013\u2014]|\s-\s')
+# Höfliche Anrede: grossgeschriebenes Sie/Ihr/Ihnen mitten im Satz
+FORMAL = re.compile(r'(?<![.!?:«"„]\s)(?<!^)\b(Sie|Ihnen|Ihre[nmrs]?|Ihr)\b')
+# Gendern: Doppelpunkt, Stern, Unterstrich oder generisches Maskulinum häufiger Wörter
+GENDER = re.compile(r'\w[:*_]innen\b|(?<!innen und )\b(Schüler|Lehrer|Klässler|Forscher|Autoren)\b')
+SCHEMA = {'karte': {'abschnitte', 'anstoesse'}, 'abgleich': {'getroffen', 'luecken', 'lesarten', 'frage'}, 'absatz': {'text', 'offen'},
+          'varianten': {'varianten'}, 'pruefen': {'anstoesse'}, 'gliederung': {'anstoesse'}}
 
-def evaluate(task, level, raw):
-    r = {'json': False, 'json_tolerant': False, 'n': 0, 'saetze': None, 'schritt': None, 'fragen': None, 'sz': None, 'striche': None, 'details': []}
+def is_question(q):
+    """Stufe stark: endet mit einer Frage, davor höchstens ein Satz, der keine Frage ist."""
+    ss = sentences(q)
+    return bool(ss) and ss[-1].rstrip('»"').endswith('?') and sum(1 for x in ss if not x.rstrip('»"').endswith('?')) <= 1
+
+def evaluate(task, level, raw, user=''):
+    r = {'json': False, 'json_tolerant': False, 'n': 0, 'saetze': None, 'schritt': None, 'fragen': None, 'sz': None, 'striche': None,
+         'du': None, 'gender': None, 'form': None, 'details': []}
     j = None
     try: j = json.loads(raw); r['json'] = True
     except Exception:
@@ -89,18 +101,32 @@ def evaluate(task, level, raw):
         r['schritt'] = not miss
         r['details'] += [f'ohne schritt: {t}' for t in miss]
     if level == 'stark':
-        qs = [p.get('text', '') for p in ps]
+        qs = [p.get('text', '') for p in ps if p.get('art') != 'Stärke']
         if task == 'karte': qs += [a.get('linse', '') for a in (j.get('abschnitte') or []) if isinstance(a, dict)]
         if task == 'abgleich' and j.get('frage'): qs.append(j['frage'])
         if qs:
-            bad = [q for q in qs if not all(s.endswith('?') for s in sentences(q))]
+            bad = [q for q in qs if not is_question(q)]
             r['fragen'] = not bad
-            r['details'] += [f'keine reine Frage: {q}' for q in bad]
+            r['details'] += [f'endet nicht mit Frage oder zu viel davor: {q}' for q in bad]
     strs = list(all_strings(j))
     sz = [s for s in strs if 'ß' in s]
     r['sz'] = not sz; r['details'] += [f'ß: {s[:80]}' for s in sz]
     st = [s for s in strs if DASH.search(s)]
     r['striche'] = not st; r['details'] += [f'Gedankenstrich: {DASH.search(s).group(0)!r} in {s[:100]}' for s in st]
+    own = [s for s in strs if task not in ('absatz', 'varianten')]   # Entwürfe richten sich an das Publikum, nicht an die Person
+    fm = [s for s in own if FORMAL.search(s)]
+    if task == 'abgleich':
+        fm += [f'dritte Person in «getroffen»: {g}' for g in (j.get('getroffen') or []) if not re.search(r'\b[Dd](u|ein\w*|ir|ich)\b', str(g))]
+    r['du'] = not fm; r['details'] += [s[:120] if s.startswith('dritte') else f'Sie-Form: {s[:100]}' for s in fm]
+    gd = [(s, GENDER.search(s).group(0)) for s in strs if GENDER.search(s)]
+    r['gender'] = not gd; r['details'] += [f'Gendern ({g}): {s[:100]}' for s, g in gd]
+    extra = set(j) - SCHEMA.get(task, set(j))
+    form = []
+    if extra: form.append('Felder ausserhalb des Schemas: ' + ', '.join(sorted(extra)))
+    if task == 'absatz':
+        m = re.search(r'"ueberschrift":\s*"([^"]*)"', user)
+        if m and m.group(1) and str(j.get('text', '')).strip().startswith(m.group(1)): form.append('Überschrift im Text wiederholt')
+    r['form'] = not form; r['details'] += form
     return r, j
 
 # ---------- Ablauf ----------
@@ -156,7 +182,7 @@ async def step(pg, level, name, action):
         RESULTS.append({'level': level, 'name': name, 'task': req.get('task', ''), 'error': f'HTTP {resp.status}: {body.get("error", "")}', 'sek': dt})
         print(f'  FEHLER  {level:6} {name}: HTTP {resp.status} {body.get("error", "")}'); return
     raw = body.get('text', '')
-    ev, j = evaluate(req.get('task', ''), level, raw)
+    ev, j = evaluate(req.get('task', ''), level, raw, req.get('user', ''))
     RESULTS.append({'level': level, 'name': name, 'task': req.get('task', ''), 'fast': req.get('fast', False), 'sek': round(dt, 1), 'eval': ev,
                     'raw': raw, 'parsed': j, 'ui': uimsg, 'user': req.get('user', '')})
     ok = all(v is not False for k, v in ev.items() if k not in ('n', 'details', 'json'))
@@ -190,7 +216,7 @@ async def run_level(browser, base, level):
     if level != 'stark':
         await step(pg, level, 'Absatz (Abschnitt 2)', lambda: pg.locator('[data-part]').nth(1).locator('[data-act=draft]').click())
         await step(pg, level, 'Absatz (Abschnitt 3)', lambda: pg.locator('[data-part]').nth(2).locator('[data-act=draft]').click())
-    await step(pg, level, 'Varianten', lambda: pg.locator('[data-part]').nth(0).locator('[data-act=variants]').click())
+        await step(pg, level, 'Varianten', lambda: pg.locator('[data-part]').nth(0).locator('[data-act=variants]').click())
     await step(pg, level, 'Text prüfen', lambda: pg.click('[data-act=review]'))
     await step(pg, level, 'Gliederung prüfen', lambda: pg.click('[data-act=outline]'))
     if errs: print('  Skriptfehler: ' + '; '.join(errs))
@@ -199,13 +225,13 @@ async def run_level(browser, base, level):
 def mark(v): return '' if v is None else ('ja' if v else '**nein**')
 
 def table():
-    rows = ['| Stufe | Funktion | Sek. | JSON | Anstösse | ≤ 2 Sätze | «schritt» | nur Fragen | kein ß | keine Striche |', '|---|---|---|---|---|---|---|---|---|---|']
+    rows = ['| Stufe | Funktion | Sek. | JSON | Anstösse | ≤ 2 Sätze | «schritt» | Frage (stark) | kein ß | keine Striche | du | Binnen-I | Form |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     for r in RESULTS:
         if 'error' in r:
-            rows.append(f"| {r['level']} | {r['name']} | | **Fehler** | | | | | | |"); continue
+            rows.append(f"| {r['level']} | {r['name']} | | **Fehler** | | | | | | | | | |"); continue
         e = r['eval']
         js = 'ja' if e['json'] else ('tolerant' if e['json_tolerant'] else '**nein**')
-        rows.append(f"| {r['level']} | {r['name']} | {r['sek']} | {js} | {e['n']} | {mark(e['saetze'])} | {mark(e['schritt'])} | {mark(e['fragen'])} | {mark(e['sz'])} | {mark(e['striche'])} |")
+        rows.append(f"| {r['level']} | {r['name']} | {r['sek']} | {js} | {e['n']} | {mark(e['saetze'])} | {mark(e['schritt'])} | {mark(e['fragen'])} | {mark(e['sz'])} | {mark(e['striche'])} | {mark(e['du'])} | {mark(e['gender'])} | {mark(e['form'])} |")
     return '\n'.join(rows)
 
 async def main():
