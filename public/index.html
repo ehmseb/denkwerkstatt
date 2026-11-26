@@ -112,6 +112,8 @@ textarea.prose{font-size:16px;line-height:1.7;min-height:160px}
 .empty.over{border-color:var(--brand);background:var(--mint)}
 .selbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:8px;box-shadow:0 6px 20px rgba(23,33,27,.14);max-width:calc(100vw - 24px);z-index:5}
 .selbar .q{font-size:13px;color:var(--muted);max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selbar{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media(pointer:coarse){.selbar{gap:10px;padding:10px 12px}.selbar button{min-height:44px;padding:0 16px}.selbar .q{flex-basis:100%;max-width:none}}
 .msg{position:fixed;left:16px;bottom:16px;max-width:min(440px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(23,33,27,.14);font-size:14px;z-index:6}
 .msg:empty{display:none}
 dialog{border:1px solid var(--line);border-radius:8px;padding:24px;width:min(560px,calc(100% - 2rem));margin:auto;background:var(--surface);color:var(--ink);box-shadow:0 12px 40px rgba(23,33,27,.18)}
@@ -147,7 +149,7 @@ legend{font-size:14px;font-weight:500;padding:0;margin-bottom:2px}
 </header>
 <p id="levelhint" class="levelhint"></p>
 <main id="app"></main>
-<div id="selbar" class="selbar" hidden><span class="q" id="selq"></span><button data-act="selmark">Markieren</button><button data-act="selnote">Notiz dazu</button></div>
+<div id="selbar" class="selbar" hidden><span class="q" id="selq"></span><button class="mini" data-act="selmark">Markieren</button><button class="mini" data-act="selnote">Notiz dazu</button></div>
 <dialog id="dlg" aria-labelledby="dlgt"><h2 id="dlgt"></h2><p id="dlgp"></p><textarea id="dlgta" rows="5"></textarea><div class="row"><button type="button" class="btn ghost" id="dlgno">Abbrechen</button><button type="button" class="btn" id="dlgok">Übernehmen</button></div></dialog>
 <dialog id="kidlg" aria-labelledby="kit">
   <h2 id="kit">KI-Einstellungen</h2>
@@ -650,7 +652,7 @@ function readHTML() {
     <section class="panel"><h2>Landkarte</h2>${mapList}</section>
     <section class="panel"><h2>Meine Notizen <span class="count">${S.notes.length}</span></h2>${S.notes.length ? `<ul class="nlist">${S.notes.map(n => `<li><button data-act="goto" data-sec="${esc(n.sec)}">${esc(short(n.text || n.quote, 80))}</button></li>`).join('')}</ul>` : '<p class="meta">Markiere Stellen im Text, um sie hier zu sammeln.</p>'}${secs.length ? '<p class="meta">Notizen, Kernpunkte und Abgleich als Markdown, zum Beispiel für deine Unterlagen.</p><div class="row"><button class="mini" data-act="copyread">Notizen kopieren</button><button class="mini" data-act="dlread">Als .md speichern</button></div>' : ''}</section>
     <section class="panel" id="globalprov">${globalProv('lesen')}</section></aside>`;
-  const doc = secs.length ? `<div class="doc" id="doc"><div class="dochead"><h2>${esc(S.doc.title || 'Dokument')}</h2><p class="meta">${secs.length} Abschnitte. Lies, was für dein Ziel zählt, und markiere mit der Maus Stellen für deine Notizen.</p></div>
+  const doc = secs.length ? `<div class="doc" id="doc"><div class="dochead"><h2>${esc(S.doc.title || 'Dokument')}</h2><p class="meta">${secs.length} Abschnitte. Lies, was für dein Ziel zählt, und markiere Stellen im Text für deine Notizen.</p></div>
     ${secs.map((s, i) => { const m = S.map[s.id]; return `<section class="sec" id="sec-${esc(s.id)}" data-sec="${esc(s.id)}"><div class="body"><h3>${esc(secTitle(s, i))}</h3>${m && m.linse ? `<p class="lens">${esc(m.linse)}</p>` : ''}<div class="txt">${markup(s)}</div></div><div class="margin" data-margin="${esc(s.id)}">${marginRead(s.id)}</div></section>`; }).join('')}
     <section class="sec" id="sec-fazit"><div class="body"><h3>Meine Kernpunkte</h3><p class="meta">Halte in eigenen Worten fest, was du mitnimmst. Erst danach gleicht die KI mit dem Text ab.</p>
       <textarea id="kern" rows="7" data-bind="kern" placeholder="Was ist für dein Leseziel wichtig? Was überzeugt dich, was nicht?">${esc(S.kern)}</textarea>
@@ -959,15 +961,15 @@ const H = {
     if (!selInfo) return;
     S.notes.push({ id: uid('n'), sec: selInfo.sec, quote: selInfo.quote, text: '' });
     try { getSelection().removeAllRanges(); } catch (e) {}
-    $('#selbar').hidden = true; save(); render();
+    hideBar(); save(); render();
   },
   async selnote() {
     if (!selInfo) return;
     const info = selInfo;
     const v = await dialog({ title: 'Notiz zur markierten Stelle', text: '«' + short(info.quote, 160) + '»', input: true, placeholder: 'Was denkst du dazu?' });
-    if (v === null) return;
+    if (v === null) { hideBar(); return; }
     S.notes.push({ id: uid('n'), sec: info.sec, quote: info.quote, text: v });
-    $('#selbar').hidden = true; save(); render();
+    hideBar(); save(); render();
   }
 };
 document.addEventListener('click', e => {
@@ -985,20 +987,24 @@ $('#file').addEventListener('change', e => { importFile(e.target.files[0]); e.ta
 $('#app').addEventListener('dragover', e => { e.preventDefault(); const d = $('#drop'); if (d) d.classList.add('over'); });
 $('#app').addEventListener('dragleave', () => { const d = $('#drop'); if (d) d.classList.remove('over'); });
 $('#app').addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) importFile(f); });
+/* Auswahlleiste: mit der Maus nach selectionchange, auf Touch-Geräten zusätzlich nach touchend.
+   Tippt man auf die Leiste, hebt der Browser die Auswahl oft vorher auf; dann bleibt die Leiste mit der gemerkten Stelle stehen. */
 const bar = $('#selbar');
+let selT, onBar = false;
 bar.addEventListener('mousedown', e => e.preventDefault());
-let selT;
-document.addEventListener('selectionchange', () => {
-  clearTimeout(selT);
-  selT = setTimeout(() => {
-    if (S.mode !== 'lesen') { bar.hidden = true; return; }
-    const sel = getSelection(), t = sel && !sel.isCollapsed ? sel.toString().replace(/\s+/g, ' ').trim() : '';
-    const n = sel && sel.anchorNode, el = n && (n.nodeType === 1 ? n : n.parentElement);
-    const sec = el && el.closest && el.closest('.txt') && el.closest('[data-sec]');
-    if (t.length >= 3 && sec) { selInfo = { sec: sec.dataset.sec, quote: t.slice(0, 600) }; $('#selq').textContent = '«' + short(t, 70) + '»'; bar.hidden = false; }
-    else bar.hidden = true;
-  }, 150);
-});
+bar.addEventListener('pointerdown', () => { onBar = true; });
+function hideBar() { bar.hidden = true; onBar = false; }
+function updateSel() {
+  if (S.mode !== 'lesen') { hideBar(); return; }
+  const sel = getSelection(), t = sel && !sel.isCollapsed ? sel.toString().replace(/\s+/g, ' ').trim() : '';
+  const n = sel && sel.anchorNode, el = n && (n.nodeType === 1 ? n : n.parentElement);
+  const sec = el && el.closest && el.closest('.txt') && el.closest('[data-sec]');
+  if (t.length >= 3 && sec) { selInfo = { sec: sec.dataset.sec, quote: t.slice(0, 600) }; $('#selq').textContent = '«' + short(t, 70) + '»'; bar.hidden = false; }
+  else if (!onBar) bar.hidden = true;
+}
+document.addEventListener('selectionchange', () => { clearTimeout(selT); selT = setTimeout(updateSel, 150); });
+document.addEventListener('touchend', e => { if (!bar.contains(e.target)) { onBar = false; clearTimeout(selT); selT = setTimeout(updateSel, 60); } }, { passive: true });
+document.addEventListener('pointerdown', e => { if (!bar.contains(e.target)) onBar = false; });
 
 render();
 badge();

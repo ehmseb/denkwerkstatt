@@ -5,6 +5,7 @@ Prüft alle drei Verbindungsarten mit simulierten Antworten:
   A  Claude-Modus (window.claude wird nachgebildet), Datei-Import, Lesen, Schreiben, Darstellung
   B  Server-Modus über server.js mit Passwort und Modellwahl
   C  Direktmodus mit eigenem Schlüssel gegen einen OpenAI-kompatiblen Mock
+  D  Textauswahl auf Touch-Geräten bei 390 px
 
 Vorbereitung (einmalig):
   cd tests && npm install
@@ -144,6 +145,37 @@ async def test_claude(browser, fx: Path):
     check('keine Skriptfehler', not errs, '; '.join(errs))
     await ctx.close()
 
+SELECT = "()=>{const w=document.createTreeWalker(document.querySelector('#doc'),NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement.closest('.txt')&&!n.parentElement.closest('mark')&&n.length>=25?1:3});const t=w.nextNode();const r=document.createRange();r.setStart(t,0);r.setEnd(t,20);const s=getSelection();s.removeAllRanges();s.addRange(r);t.parentElement.dispatchEvent(new TouchEvent('touchend',{bubbles:true}));}"
+
+async def test_touch(browser):
+    print('D  Touch, 390 px')
+    ctx = await browser.new_context(viewport={'width': 390, 'height': 844}, has_touch=True, is_mobile=True, device_scale_factor=1)
+    await ctx.add_init_script(STUB); await ctx.route('**/fonts.g*/**', lambda r: r.abort())
+    pg = await ctx.new_page(); errs = watch(pg)
+    await pg.goto(PAGE); await pg.wait_for_timeout(1200)
+    check('kein seitliches Scrollen bei 390px', await pg.evaluate('document.documentElement.scrollWidth') <= 390)
+    marks = await pg.locator('mark').count()
+    await pg.evaluate(SELECT); await pg.wait_for_timeout(400)
+    check('Auswahlleiste nach touchend', await pg.is_visible('#selbar'))
+    box = await pg.locator('#selbar').bounding_box(); hb = await pg.locator('[data-act=selmark]').bounding_box()
+    check('Auswahlleiste im Bild, Knöpfe mindestens 44 px hoch', box and box['x'] >= 0 and box['x'] + box['width'] <= 390 and box['y'] + box['height'] <= 844 and hb['height'] >= 44, str(box))
+    # Der Browser hebt die Auswahl beim Tippen auf die Leiste auf: Leiste bleibt mit der gemerkten Stelle
+    await pg.locator('[data-act=selmark]').dispatch_event('pointerdown')
+    await pg.evaluate('getSelection().removeAllRanges()'); await pg.wait_for_timeout(400)
+    check('Leiste bleibt, wenn die Auswahl beim Tippen verschwindet', await pg.is_visible('#selbar'))
+    await pg.tap('[data-act=selmark]'); await pg.wait_for_timeout(300)
+    check('Markieren per Tippen', await pg.locator('mark').count() > marks and not await pg.is_visible('#selbar'))
+    await pg.evaluate(SELECT); await pg.wait_for_timeout(400)
+    await pg.locator('.dochead').dispatch_event('pointerdown')
+    await pg.evaluate('getSelection().removeAllRanges()'); await pg.wait_for_timeout(400)
+    check('Tippen daneben schliesst die Leiste', not await pg.is_visible('#selbar'))
+    await pg.evaluate(SELECT); await pg.wait_for_timeout(400)
+    await pg.locator('[data-act=selnote]').dispatch_event('pointerdown'); await pg.evaluate('getSelection().removeAllRanges()')
+    await pg.tap('[data-act=selnote]'); await pg.fill('#dlgta', 'Notiz vom Handy'); await pg.tap('#dlgok'); await pg.wait_for_timeout(300)
+    check('Notiz per Tippen', 'Notiz vom Handy' in await pg.inner_text('#app'))
+    check('keine Skriptfehler', not errs, '; '.join(errs))
+    await ctx.close()
+
 def http(path, data=None, headers=None):
     req = urllib.request.Request(f'http://localhost:{SRV_PORT}{path}', data=json.dumps(data).encode() if data else None, headers=headers or {}, method='POST' if data else 'GET')
     try:
@@ -225,7 +257,7 @@ async def main():
                 kw = {'args': ['--no-sandbox']}
                 if os.environ.get('CHROME_PATH'): kw['executable_path'] = os.environ['CHROME_PATH']
                 browser = await p.chromium.launch(**kw)
-                await test_claude(browser, fx); await test_server(browser); await test_direct(browser)
+                await test_claude(browser, fx); await test_server(browser); await test_direct(browser); await test_touch(browser)
                 await browser.close()
     finally:
         for pr in procs: pr.terminate()
