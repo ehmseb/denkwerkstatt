@@ -270,34 +270,40 @@ const RULES = `REGELN FÜR DENKANSTÖSSE
 - jeder Denkanstoss hat im Feld "schritt" einen kurzen, umsetzbaren nächsten Schritt
 - sachlicher Ton, keine Warnungen, kein «Achtung», keine Emojis
 - lieber wenige gute als viele; wo es nichts Wesentliches zu sagen gibt, keinen
-Schreibe Deutsch in Schweizer Rechtschreibung (ss statt ß).
-Antworte ausschliesslich mit einem JSON-Objekt nach dem angegebenen Schema, ohne Text davor oder danach und ohne Codeblock.`;
+SPRACHE IN ALLEN TEXTEN
+- Deutsch in Schweizer Rechtschreibung (ss statt ß)
+- sprich die Person immer mit «du» an, nie mit «Sie» und nie in der dritten Person
+- gendere mit Binnen-I, zum Beispiel SchülerInnen, LehrerInnen, ForscherInnen
+- keine Gedankenstriche (– oder —); verwende stattdessen Komma, Doppelpunkt oder einen neuen Satz
+FORMAT
+Antworte ausschliesslich mit einem JSON-Objekt nach dem angegebenen Schema, ohne Text davor oder danach und ohne Codeblock. Gib nur die Felder des Schemas zurück.`;
 const LEVEL = {
   leicht: 'STUFE leicht: Du darfst Inhalte direkt liefern. Denkanstösse sparsam.',
   mittel: 'STUFE mittel: Die Person gibt die Richtung vor. Baue auf ihren Gedanken auf, nimm Ergebnisse nicht vorweg und fordere sie heraus.',
-  stark: 'STUFE stark: sokratisch. Formuliere nur Fragen und vage Hinweise. Verrate keine Inhalte, Lösungen oder Zusammenfassungen.'
+  stark: 'STUFE stark: sokratisch. Jeder Denkanstoss endet mit einer Frage; davor steht höchstens ein kurzer Satz, der auf die Stelle verweist, ohne ihren Inhalt zu verraten. Verrate keine Inhalte, Lösungen oder Zusammenfassungen.'
 };
 const LINSE = {
   leicht: 'ein bis zwei Sätze, was dieser Abschnitt unter der Linse für das Leseziel hergibt',
   mittel: 'ein Satz, worauf die Person beim Lesen dieses Abschnitts achten soll, ohne das Ergebnis vorwegzunehmen',
   stark: 'eine Frage, die das Lesen dieses Abschnitts leitet'
 };
+const FRAGE = () => S.level === 'stark' ? 'Jeder Denkanstoss endet mit einer Frage, davor höchstens ein kurzer Bezugssatz.' : '';
 const TASK = {
-  karte: d => `AUFGABE: Erstelle eine Landkarte des Dokuments für Leseziel und Linse der Person. Gib für jeden Abschnitt (gleiche id wie in den Daten) einen kurzen Titel (höchstens 6 Wörter) und im Feld "linse" ${LINSE[S.level]}. Fasse den Text nicht zusammen: Die Person soll das Wichtige selbst lesen. Gib dazu höchstens ${Math.min(6, Math.max(1, Math.ceil(d.abschnitte.length / 3)))} Denkanstösse zu Abschnitten, bei denen sich für das Leseziel genaueres Hinsehen lohnt. Art: eine von Annahme, Alternative, Gegenargument, Spannung, Deutung, Frage.
+  karte: d => `AUFGABE: Erstelle eine Landkarte des Dokuments für Leseziel und Linse der Person. Gib für jeden Abschnitt (gleiche id wie in den Daten) einen kurzen Titel (höchstens 6 Wörter) und im Feld "linse" ${LINSE[S.level]}. Fasse den Text nicht zusammen: Die Person soll das Wichtige selbst lesen. Gib dazu höchstens ${Math.min(6, Math.max(1, Math.ceil(d.abschnitte.length / 3)))} Denkanstösse zu Abschnitten, bei denen sich für das Leseziel genaueres Hinsehen lohnt. Art: eine von Annahme, Alternative, Gegenargument, Spannung, Deutung, Frage. ${FRAGE()}
 SCHEMA: {"abschnitte":[{"id":"s1","titel":"…","linse":"…"}],"anstoesse":[{"id":"s3","art":"Annahme","text":"…","schritt":"…"}]}`,
-  abgleich: () => `AUFGABE: Die Person hat den Text gelesen und ihre Kernpunkte formuliert. Vergleiche Kernpunkte und Notizen mit dem Text im Hinblick auf ihr Leseziel. Schreibe ihre Kernpunkte nicht neu und liefere keine eigene Zusammenfassung.
-"getroffen": 1 bis 3 konkrete Punkte, die sie gut erfasst hat (ehrlich, nur wenn zutreffend).
-"luecken": höchstens 3 für ihr Ziel wichtige Stellen, die sie übergangen hat, je mit Abschnitts-id. ${S.level === 'stark' ? 'Verrate den Inhalt nicht, verweise auf die Stelle und stelle eine Frage.' : 'Nenne knapp, was dort steht und warum es für ihr Ziel zählt.'}
-"lesarten": höchstens 2 Stellen, die man anders deuten kann als sie es tut, je mit Abschnitts-id.
-"frage": eine Reflexionsfrage zu ihrem Verständnis oder dazu, wie sicher sie sich ist.
+  abgleich: () => `AUFGABE: Die Person hat den Text gelesen und ihre Kernpunkte formuliert. Vergleiche Kernpunkte und Notizen mit dem Text im Hinblick auf ihr Leseziel. Schreibe ihre Kernpunkte nicht neu und liefere keine eigene Zusammenfassung. Sprich sie in allen Feldern mit «du» an.
+"getroffen": 1 bis 3 konkrete Punkte, die sie gut erfasst hat, je ein Satz in der Du-Form, zum Beispiel «Du hast …» (ehrlich, nur wenn zutreffend).
+"luecken": höchstens 3 für ihr Ziel wichtige Stellen, die sie übergangen hat, je mit Abschnitts-id. ${S.level === 'stark' ? 'Verrate den Inhalt nicht, verweise auf die Stelle und stelle eine Frage.' : 'Nenne in höchstens zwei Sätzen, was dort steht und warum es für ihr Ziel zählt.'}
+"lesarten": höchstens 2 Stellen, die man anders deuten kann als sie es tut, je mit Abschnitts-id, je höchstens zwei Sätze. ${FRAGE()}
+"frage": eine Reflexionsfrage an sie zu ihrem Verständnis oder dazu, wie sicher sie sich ist.
 SCHEMA: {"getroffen":["…"],"luecken":[{"id":"s2","text":"…","schritt":"…"}],"lesarten":[{"id":"s4","text":"…","schritt":"…"}],"frage":"…"}`,
-  absatz: () => `AUFGABE: Formuliere den Abschnitt mit der Überschrift aus den Daten als zusammenhängenden Text, ausschliesslich auf Grundlage der Stichworte der Person. Füge keine neuen Fakten, Beispiele oder Argumente hinzu. Fehlt etwas Nötiges, setze an der Stelle eckige Klammern mit einem kurzen Hinweis, zum Beispiel [Beispiel ergänzen]. Passe Ton und Länge an Ziel und Publikum an. "offen": ein Satz dazu, was in den Stichworten fehlt oder unklar ist, sonst ein leerer String.
+  absatz: () => `AUFGABE: Formuliere den Abschnitt mit der Überschrift aus den Daten als zusammenhängenden Text, ausschliesslich auf Grundlage der Stichworte der Person. Füge keine neuen Fakten, Beispiele oder Argumente hinzu. Fehlt etwas Nötiges, setze an der Stelle eckige Klammern mit einem kurzen Hinweis, zum Beispiel [Beispiel ergänzen]. Passe Ton und Länge an Ziel und Publikum an. Schreibe nur den Fliesstext, ohne die Überschrift zu wiederholen. Schreibe über die Sache, nicht über den Text, seine Kernaussage oder die Planung. "offen": ein Satz dazu, was in den Stichworten fehlt oder unklar ist, sonst ein leerer String.
 SCHEMA: {"text":"…","offen":"…"}`,
   varianten: d => `AUFGABE: Schreibe drei deutlich verschiedene Varianten des Textes, zum Beispiel knapper, anschaulicher, sachlicher oder anders aufgebaut. Der Inhalt bleibt gleich, keine neuen Fakten. ${d.ist_auszug ? 'Der Text ist ein Auszug; jede Variante muss sich nahtlos an seiner Stelle einfügen lassen.' : ''} "label": 2 bis 4 Wörter, die den Unterschied benennen.
 SCHEMA: {"varianten":[{"label":"…","text":"…"}]}`,
-  pruefen: d => `AUFGABE: Lies den Entwurf als kritische Kollegin. Gib höchstens ${d.max} Denkanstösse zu konkreten Stellen, je mit der id des Abschnitts oder "gesamt" für den ganzen Text. Art: eine von Gegenargument, Denkfehler, Alternative, Lücke, Klarheit, Frage, Stärke. Beziehe dich auf Ziel, Publikum und Kernaussage. Formuliere nichts für die Person um und schreibe keine Ersatztexte. Wiederhole nichts aus "bereits". ${S.level === 'stark' ? 'Formuliere jeden Denkanstoss als Frage.' : ''} Ist eine Stelle wirklich gelungen, darfst du höchstens einen Denkanstoss der Art "Stärke" geben, der benennt, was gelingt.
+  pruefen: d => `AUFGABE: Lies den Entwurf als kritische Kollegin. Gib höchstens ${d.max} Denkanstösse zu konkreten Stellen, je mit der id des Abschnitts oder "gesamt" für den ganzen Text. Art: eine von Gegenargument, Denkfehler, Alternative, Lücke, Klarheit, Frage, Stärke. Beziehe dich auf Ziel, Publikum und Kernaussage. Formuliere nichts für die Person um und schreibe keine Ersatztexte. Wiederhole nichts aus "bereits". ${FRAGE()}${S.level === 'stark' ? ' Ausnahme: Ein Denkanstoss der Art "Stärke" ist eine Aussage.' : ''} Ist eine Stelle wirklich gelungen, darfst du höchstens einen Denkanstoss der Art "Stärke" geben, der benennt, was gelingt.
 SCHEMA: {"anstoesse":[{"id":"p1","art":"Gegenargument","text":"…","schritt":"…"}]}`,
-  gliederung: () => `AUFGABE: Prüfe die Gliederung der Person (Überschriften und Stichworte), nicht die Formulierung. Gib höchstens 4 Denkanstösse zu fehlenden Teilen, Reihenfolge, Gewichtung und Passung zu Ziel und Kernaussage, je mit Abschnitts-id oder "gesamt". Schlage keine komplette neue Gliederung vor. ${S.level === 'stark' ? 'Formuliere jeden Denkanstoss als Frage.' : ''}
+  gliederung: () => `AUFGABE: Prüfe die Gliederung der Person (Überschriften und Stichworte), nicht die Formulierung. Gib höchstens 4 Denkanstösse zu fehlenden Teilen, Reihenfolge, Gewichtung und Passung zu Ziel und Kernaussage, je mit Abschnitts-id oder "gesamt". Schlage keine komplette neue Gliederung vor. ${FRAGE()}
 SCHEMA: {"anstoesse":[{"id":"gesamt","art":"Lücke","text":"…","schritt":"…"}]}`
 };
 function buildPrompt(task, d) {
@@ -678,7 +684,7 @@ function writeHTML() {
       <input class="h" type="text" aria-label="Überschrift Abschnitt ${i + 1}" data-pbind="h" value="${esc(p.h)}" placeholder="Überschrift von Abschnitt ${i + 1}">
       <label for="st-${id}">Deine Stichworte und Entscheidungen</label><textarea id="st-${id}" class="stich" rows="3" data-pbind="stich" placeholder="Was gehört hier hinein? Welche Reihenfolge, welches Beispiel?">${esc(p.stich)}</textarea>
       <label for="tx-${id}">Text</label><textarea id="tx-${id}" class="prose" rows="6" data-pbind="text" placeholder="${S.level === 'stark' ? 'Schreib selbst. Die KI fragt nach, wenn du den Text prüfen lässt.' : 'Schreib selbst oder lass einen Absatz aus deinen Stichworten entwerfen.'}">${esc(p.text)}</textarea>
-      <div class="row">${S.level === 'stark' ? '' : '<button class="mini" data-act="draft">Absatz aus meinen Stichworten</button>'}<button class="mini" data-act="variants">Varianten</button><button class="mini" data-act="move" data-d="-1"${i ? '' : ' disabled'}>Nach oben</button><button class="mini" data-act="move" data-d="1"${i < w.parts.length - 1 ? '' : ' disabled'}>Nach unten</button><button class="mini" data-act="delpart"${w.parts.length > 1 ? '' : ' disabled'}>Entfernen</button></div></div>
+      <div class="row">${S.level === 'stark' ? '' : '<button class="mini" data-act="draft">Absatz aus meinen Stichworten</button><button class="mini" data-act="variants">Varianten</button>'}<button class="mini" data-act="move" data-d="-1"${i ? '' : ' disabled'}>Nach oben</button><button class="mini" data-act="move" data-d="1"${i < w.parts.length - 1 ? '' : ' disabled'}>Nach unten</button><button class="mini" data-act="delpart"${w.parts.length > 1 ? '' : ' disabled'}>Entfernen</button></div></div>
       <div class="margin" data-margin="${id}">${marginWrite(p.id)}</div></section>`; }).join('');
   const all = w.parts.reduce((a, p) => a + words(p.text), 0);
   const doc = `<div class="doc"><div class="dochead"><h2>${esc(w.titel || 'Mein Text')}</h2><p class="meta">Du baust die Gliederung und entscheidest, was in jeden Abschnitt gehört. ${S.level === 'stark' ? 'Auf Stufe stark schreibst du selbst, die KI stellt nur Fragen.' : 'Die KI formuliert nur auf Grundlage deiner Stichworte.'}</p></div>

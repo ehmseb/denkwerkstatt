@@ -129,7 +129,7 @@ async def test_claude(browser, fx: Path):
     await pg.locator('[data-act=drop]').first.click(); await pg.click('#dlgok'); await pg.wait_for_timeout(200)
     check('Verwerfen markiert Anstoss', await pg.locator('.note.done').count() >= 2)
     await pg.click('[data-act=level][data-v=stark]'); await pg.click('.seg [data-v=schreiben]')
-    check('Stufe stark: keine Entwürfe', await pg.locator('[data-act=draft]').count() == 0)
+    check('Stufe stark: keine Entwürfe und keine Varianten', await pg.locator('[data-act=draft]').count() == 0 and await pg.locator('[data-act=variants]').count() == 0)
     check('keine Skriptfehler', not errs, '; '.join(errs))
     await ctx.close()
 
