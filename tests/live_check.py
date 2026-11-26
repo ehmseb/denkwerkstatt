@@ -197,7 +197,7 @@ async def run_level(browser, base, level):
     errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
     await pg.goto(base + '/'); await pg.wait_for_timeout(1500)
     await pg.click(f'[data-act=level][data-v={level}]')
-    await pg.click('.tools [data-act=reset]'); await pg.wait_for_timeout(300)
+    await pg.click('.banner [data-act=reset]'); await pg.wait_for_timeout(300)
     await pg.set_input_files('#file', str(DOC)); await pg.wait_for_timeout(1200)
     L = INP['lesen']
     await pg.fill('#purpose', L['leseziel']); await pg.fill('#lens', L['linse'])

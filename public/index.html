@@ -123,7 +123,12 @@ dialog p{margin:0 0 10px}
 dialog .row{justify-content:flex-end}
 fieldset{border:0;padding:0;margin:0 0 6px}
 legend{font-size:14px;font-weight:500;padding:0;margin-bottom:2px}
-#kidlg{width:min(600px,calc(100% - 2rem));max-height:92vh;overflow:auto}
+#kidlg,#pjdlg{width:min(600px,calc(100% - 2rem));max-height:92vh;overflow:auto}
+.pjlist{list-style:none;padding:0;margin:0 0 12px}
+.pjlist li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.pjlist li:last-child{border-bottom:1px solid var(--line)}
+.pjlist .nm{min-width:0;flex:1 1 200px}.pjlist .nm b{display:block;font-weight:600;overflow-wrap:anywhere}.pjlist .nm span{font-size:13px;color:var(--muted)}
+.pjlist .acts{display:flex;flex-wrap:wrap;gap:6px}
 @media(min-width:1100px){.side{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}}
 @media(max-width:1099px){.wrap{grid-template-columns:minmax(0,1fr)}.side{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0 28px}.panel{border-top:0;padding-top:0}.doc{border-right:0}.side{align-items:start}.side>.banner{grid-column:1/-1}}
 @media(max-width:760px){.sec{grid-template-columns:minmax(0,1fr);gap:12px}.margin{border-left:2px solid var(--line);padding-left:14px}}
@@ -143,7 +148,7 @@ legend{font-size:14px;font-weight:500;padding:0;margin-bottom:2px}
     <label class="btn ghost" for="file">Datei öffnen</label>
     <input type="file" id="file" hidden accept=".pdf,.docx,.doc,.txt,.md,.markdown,text/plain,application/pdf">
     <button class="btn ghost" data-act="paste">Text einfügen</button>
-    <button class="link" data-act="reset">Neu beginnen</button>
+    <button class="btn ghost" data-act="projects" id="pjbtn">Projekte</button>
     <button id="ai" class="ai" data-act="settings" title="KI-Einstellungen">KI wird verbunden …</button>
   </div>
 </header>
@@ -179,6 +184,12 @@ legend{font-size:14px;font-weight:500;padding:0;margin-bottom:2px}
   </div>
   <p class="meta" id="ki-status" role="status"></p>
   <div class="row"><button type="button" class="btn ghost" id="ki-cancel">Abbrechen</button><button type="button" class="btn ghost" id="ki-test">Speichern und testen</button><button type="button" class="btn" id="ki-save">Speichern</button></div>
+</dialog>
+<dialog id="pjdlg" aria-labelledby="pjt">
+  <h2 id="pjt">Projekte</h2>
+  <p class="meta">Jedes Projekt hat ein eigenes Dokument zum Lesen und einen eigenen Text zum Schreiben. Alles bleibt in diesem Browser.</p>
+  <ul class="pjlist" id="pjlist"></ul>
+  <div class="row"><button type="button" class="btn ghost" id="pjclose">Schliessen</button><button type="button" class="btn" data-act="pjnew">Neues Projekt</button></div>
 </dialog>
 <div id="msg" class="msg" role="status" aria-live="polite"></div>
 <script>
@@ -251,11 +262,32 @@ function sampleState() {
   return s;
 }
 
-let S = null;
-try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
-if (!S || S.v !== 1) S = sampleState();
+/* Projekte: Liste unter KEY-projekte, jedes Projekt unter KEY-p-<id>. Ein früherer Einzelzustand unter KEY wird beim ersten Start zum ersten Projekt. */
+const PKEY = KEY + '-projekte', pkey = id => KEY + '-p-' + id;
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const okState = x => x && x.v === 1;
+let S = null, PJ = lsGet(PKEY);
+if (PJ && Array.isArray(PJ.list) && PJ.list.length) {
+  if (!PJ.list.some(e => e.id === PJ.cur)) PJ.cur = PJ.list[0].id;
+  S = lsGet(pkey(PJ.cur));
+  if (!okState(S)) S = blank();
+} else {
+  const old = lsGet(KEY), id = uid('j');
+  S = okState(old) ? old : sampleState();
+  PJ = { cur: id, list: [{ id, name: '', auto: true, t: Date.now() }] };
+  if (lsSet(pkey(id), S) && lsSet(PKEY, PJ) && old) { try { localStorage.removeItem(KEY); } catch (e) {} }
+}
+const curPJ = () => PJ.list.find(e => e.id === PJ.cur);
+const autoName = st => st.sample ? 'Beispiel: ' + st.doc.title : (st.doc.title || st.w.titel || '').trim();
 let saveT;
-function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300); }
+function flush() {
+  clearTimeout(saveT);
+  const e = curPJ(); if (!e) return;
+  e.t = Date.now(); if (e.auto) e.name = autoName(S);
+  lsSet(pkey(e.id), S); lsSet(PKEY, PJ);
+}
+function save() { clearTimeout(saveT); saveT = setTimeout(flush, 300); }
 
 /* ---------- KI ---------- */
 const capCache = {};
@@ -832,6 +864,20 @@ async function doOutline() {
   save(); updateMargins();
   msg('Denkanstösse zur Gliederung stehen am Rand und unter «Zum Ganzen».');
 }
+/* ---------- Projekte ---------- */
+const pjName = e => (e && (e.id === PJ.cur && e.auto ? autoName(S) : e.name)) || 'Ohne Titel';
+function pjList() {
+  const fmt = t => { try { return new Date(t).toLocaleString('de-CH', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+  $('#pjlist').innerHTML = PJ.list.slice().sort((a, b) => (b.id === PJ.cur) - (a.id === PJ.cur) || b.t - a.t).map(e => `<li data-pj="${esc(e.id)}"><div class="nm"><b>${esc(pjName(e))}</b><span>${e.id === PJ.cur ? 'geöffnet' : 'geändert ' + esc(fmt(e.t))}</span></div>
+    <div class="acts">${e.id === PJ.cur ? '' : `<button class="mini" data-act="pjopen" data-id="${esc(e.id)}">Öffnen</button>`}<button class="mini" data-act="pjren" data-id="${esc(e.id)}">Umbenennen</button><button class="mini" data-act="pjdel" data-id="${esc(e.id)}">Löschen</button></div></li>`).join('');
+}
+function closePJ() { try { $('#pjdlg').close(); } catch (e) { $('#pjdlg').removeAttribute('open'); } }
+function resetView() { S.prov.forEach(p => { p.neu = false; }); lastWords = -1; selInfo = null; hideBar(); render(); window.scrollTo(0, 0); }
+function openProject(id) {
+  const st = lsGet(pkey(id));
+  PJ.cur = id; S = okState(st) ? st : blank(S.level); lsSet(PKEY, PJ); resetView();
+}
+$('#pjclose').onclick = closePJ;
 const mdOut = () => ['# ' + (S.w.titel || 'Mein Text')].concat(...S.w.parts.map(p => [p.h ? '## ' + p.h : '', p.text].filter(Boolean))).join('\n\n');
 const quoteMd = t => String(t).split('\n').map(l => '> ' + l).join('\n');
 function mdRead() {
@@ -888,6 +934,32 @@ const H = {
   async reset() {
     if (!S.sample && await dialog({ title: 'Neu beginnen?', text: 'Dokument, Notizen, Denkanstösse und dein Text werden aus dieser Werkstatt gelöscht.', ok: 'Neu beginnen' }) === null) return;
     S = blank(S.level); save(); render(); window.scrollTo(0, 0);
+  },
+  projects() { pjList(); try { $('#pjdlg').showModal(); } catch (e) { $('#pjdlg').setAttribute('open', ''); } },
+  pjopen(b) { flush(); openProject(b.dataset.id); closePJ(); msg('Projekt «' + pjName(curPJ()) + '» geöffnet.'); },
+  pjnew() {
+    flush();
+    const id = uid('j'); PJ.list.unshift({ id, name: '', auto: true, t: Date.now() });
+    PJ.cur = id; S = blank(S.level); flush(); resetView(); closePJ(); msg('Neues Projekt angelegt. Öffne ein Dokument oder beginne mit dem Schreiben.');
+  },
+  async pjren(b) {
+    const e = PJ.list.find(x => x.id === b.dataset.id); if (!e) return;
+    const v = await dialog({ title: 'Projekt umbenennen', input: true, value: pjName(e), ok: 'Umbenennen' });
+    if (v === null) return;
+    e.name = v.slice(0, 120); e.auto = !v; if (e.id === PJ.cur) flush(); else lsSet(PKEY, PJ);
+    pjList();
+  },
+  async pjdel(b) {
+    const e = PJ.list.find(x => x.id === b.dataset.id); if (!e) return;
+    if (await dialog({ title: 'Projekt löschen?', text: '«' + pjName(e) + '» mit Dokument, Notizen, Denkanstössen und Text wird aus diesem Browser gelöscht. Das lässt sich nicht rückgängig machen.', ok: 'Löschen' }) === null) return;
+    flush();
+    PJ.list = PJ.list.filter(x => x.id !== e.id);
+    try { localStorage.removeItem(pkey(e.id)); } catch (err) {}
+    if (e.id === PJ.cur) {
+      if (PJ.list.length) openProject(PJ.list[0].id);
+      else { const id = uid('j'); PJ.list.push({ id, name: '', auto: true, t: Date.now() }); PJ.cur = id; S = blank(S.level); flush(); resetView(); }
+    }
+    lsSet(PKEY, PJ); pjList(); msg('Projekt gelöscht.');
   },
   map: b => run(b, doMap),
   compare: b => run(b, doCompare),
