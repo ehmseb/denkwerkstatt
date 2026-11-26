@@ -6,6 +6,7 @@ Prüft alle drei Verbindungsarten mit simulierten Antworten:
   B  Server-Modus über server.js mit Passwort und Modellwahl
   C  Direktmodus mit eigenem Schlüssel gegen einen OpenAI-kompatiblen Mock
   D  Textauswahl auf Touch-Geräten bei 390 px
+  F  Lange Dokumente: Landkarte in Teilen, Abgleich mit Vorrang für Notizen
 
 Vorbereitung (einmalig):
   cd tests && npm install
@@ -34,6 +35,7 @@ window.claude = { use: async (n) => {
   if (n !== 'sample') return null;
   return async (prompt) => {
     window.__calls.push(prompt);
+    if (window.__failAt && prompt.includes('Landkarte') && window.__calls.filter(c => c.includes('Landkarte')).length === window.__failAt) throw new Error('Simulierter Abbruch');
     const d = JSON.parse(prompt.match(/DATEN:\n\n([\s\S]*)$/)[1]); let r;
     if (prompt.includes('Landkarte')) r = { abschnitte: d.abschnitte.map(a => ({ id: a.id, titel: 'Titel ' + a.id, linse: 'Linse für ' + a.id })), anstoesse: [{ id: d.abschnitte[0].id, art: 'Frage', text: 'Was meinst du <b>dazu</b>?', schritt: 'Notiere es.' }, { id: 'xx', art: 'Spannung', text: 'Global', schritt: '' }] };
     else if (prompt.includes('Kernpunkte formuliert')) r = { getroffen: ['Punkt A'], luecken: [{ id: (d.abschnitte[1] || d.abschnitte[0]).id, text: 'Lücke hier', schritt: 'Lies nach' }], lesarten: [], frage: 'Wie sicher bist du?' };
@@ -176,6 +178,50 @@ async def test_touch(browser):
     check('keine Skriptfehler', not errs, '; '.join(errs))
     await ctx.close()
 
+def long_text():
+    words = 'Zelle Membran Enzym Substrat Energie Molekül Reaktion Diffusion Gradient Protein'.split()
+    out = []
+    for k in range(12):
+        out.append(f'# Kapitel {k + 1}')
+        for j in range(6):
+            out.append(f'Absatz {k + 1}.{j + 1}: ' + ' '.join(words[(i + j + k) % 10] for i in range(300)) + '.')
+    return '\n\n'.join(out)
+
+async def test_long(browser):
+    print('F  Lange Dokumente')
+    ctx = await new_ctx(browser, stub=True); pg = await ctx.new_page(); errs = watch(pg)
+    await pg.goto(PAGE); await pg.wait_for_timeout(800)
+    text = long_text()
+    await pg.click('.tools [data-act=paste]'); await pg.fill('#dlgta', text); await pg.click('#dlgok'); await pg.wait_for_timeout(600)
+    n = await pg.locator('.sec[data-sec]').count()
+    await pg.fill('#purpose', 'Ich will den Aufbau verstehen'); await pg.evaluate('window.__calls = []')
+    await pg.click('[data-act=map]'); await pg.wait_for_timeout(1200)
+    calls = await pg.evaluate("window.__calls.filter(c => c.includes('Landkarte'))")
+    check('Landkarte in mehreren Teilen', len(calls) >= 3, f'{len(calls)} Teile, {len(text)} Zeichen')
+    check('jeder Teil unter 45 000 Zeichen', all(len(c) < 45000 for c in calls), str([len(c) for c in calls]))
+    check('nichts gekürzt', not any('[…]' in c for c in calls))
+    check('jeder Teil kennt seine Stelle im Ganzen', all('"teil":' in c and '"gliederung":' in c for c in calls))
+    check('alle Abschnitte haben eine Linse', await pg.locator('.lens').count() == n, f'{await pg.locator(".lens").count()} von {n}')
+    check('Meldung nennt die Teile', 'Teilen erstellt' in await pg.text_content('#msg'))
+    # Abgleich: Abschnitt mit Notiz vollständig, übrige gekürzt
+    sec = await pg.locator('.sec[data-sec]').nth(5).get_attribute('data-sec')
+    full = await pg.evaluate(f"document.querySelector('[data-sec={sec}] .txt').innerText.replace(/\\s+/g, ' ').trim()")
+    await pg.locator(f'[data-margin={sec}] [data-act=addnote]').click(); await pg.fill('#dlgta', 'wichtig'); await pg.click('#dlgok'); await pg.wait_for_timeout(200)
+    await pg.fill('#kern', ' '.join(['wort'] * 30)); await pg.evaluate('window.__calls = []')
+    await pg.click('[data-act=compare]'); await pg.wait_for_timeout(600)
+    c = (await pg.evaluate('window.__calls'))[0]
+    d = json.loads(c.split('DATEN:\n\n', 1)[1])
+    mine = next(x for x in d['abschnitte'] if x['id'] == sec)
+    check('Abgleich: Abschnitt mit Notiz vollständig', not mine['text'].endswith('[…]') and len(c) < 75000, f'{len(c)} Zeichen')
+    check('Abgleich meldet die Kürzung', 'gekürzt' in await pg.text_content('#msg'))
+    # Ein Teil schlägt fehl: Teilergebnis bleibt, Meldung sagt es
+    await pg.evaluate('window.__calls = []; window.__failAt = 2')
+    await pg.click('[data-act=map]'); await pg.wait_for_timeout(1000)
+    check('Abbruch in Teil 2 wird gemeldet', 'unvollständig' in await pg.text_content('#msg'), await pg.text_content('#msg'))
+    check('Landkarte bleibt nach Abbruch sichtbar', await pg.locator('.lens').count() > 0)
+    check('keine Skriptfehler', not errs, '; '.join(errs))
+    await ctx.close()
+
 def http(path, data=None, headers=None):
     req = urllib.request.Request(f'http://localhost:{SRV_PORT}{path}', data=json.dumps(data).encode() if data else None, headers=headers or {}, method='POST' if data else 'GET')
     try:
@@ -257,7 +303,7 @@ async def main():
                 kw = {'args': ['--no-sandbox']}
                 if os.environ.get('CHROME_PATH'): kw['executable_path'] = os.environ['CHROME_PATH']
                 browser = await p.chromium.launch(**kw)
-                await test_claude(browser, fx); await test_server(browser); await test_direct(browser); await test_touch(browser)
+                await test_claude(browser, fx); await test_server(browser); await test_direct(browser); await test_touch(browser); await test_long(browser)
                 await browser.close()
     finally:
         for pr in procs: pr.terminate()
