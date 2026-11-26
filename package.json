@@ -1,0 +1,14 @@
+{
+  "name": "denkwerkstatt",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lesen und Schreiben mit Denkanstössen am Rand, ohne Chat. Mit Proxy-Server für beliebige KI-Anbieter.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

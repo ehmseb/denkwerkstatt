@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Denkwerkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Caveat:wght@600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+/* VOICE everyday work tool for a teacher: calm, exact, a little handmade
+   IDEA a printed text on the desk, read with a highlighter and annotated in red pen in the margin
+   PICTURE the document itself with its margin column of red-pen annotations
+   COLOUR white paper, black ink, highlighter yellow band and marks, red pen for provocations
+   TYPE Atkinson Hyperlegible for the tool, Source Serif 4 for the document, Caveat for margin labels
+   LAYOUT laptop: side panel, text, margin; 720px: panels above, text with margin; phone: stacked, notes under each section */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#131416);--ink:light-dark(#17181b,#ecebe7);--soft:light-dark(#5a5e66,#a9adb4);--line:light-dark(#dfe1e4,#2c2f34);--panel:light-dark(#f5f6f7,#1b1d20);--hl:light-dark(#ffe94d,#5c5000);--band:light-dark(#ffe94d,#26230b);--red:light-dark(#c8102e,#ff7d8d)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Atkinson Hyperlegible",system-ui,sans-serif;overflow-x:clip}
+button{font:inherit;color:inherit}
+.top{background:var(--band);display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;padding:14px max(3vw,16px)}
+.brand h1{font-size:32px;line-height:1.05;letter-spacing:-.02em;margin:0}
+.brand p{margin:3px 0 0;font-size:14px}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:999px;overflow:hidden}
+.seg button{border:0;background:transparent;font-size:15px;padding:0 16px;min-height:40px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--band);font-weight:700}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-left:auto}
+.ai{font-size:13px;padding:0 12px;min-height:34px;border:1px solid currentColor;border-radius:999px;white-space:nowrap;background:transparent;cursor:pointer;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.ai:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+select{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;min-height:44px}
+fieldset{border:0;padding:0;margin:0 0 6px}
+legend{font-size:14px;font-weight:700;padding:0;margin-bottom:2px}
+#kidlg{width:min(600px,94vw);max-height:92vh;overflow:auto}
+.levelhint{margin:0;padding:8px max(3vw,16px);font-size:14px;color:var(--soft);border-bottom:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:var(--bg);border:2px solid var(--ink);border-radius:10px;min-height:44px;padding:0 16px;font-weight:700;font-size:15px;cursor:pointer;text-align:center}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:disabled,.mini:disabled{opacity:.5;cursor:default}
+.mini{background:var(--bg);border:1px solid var(--line);border-radius:8px;min-height:38px;padding:0 11px;font-size:14px;cursor:pointer}
+.mini:hover,.btn.ghost:hover{background:var(--panel)}
+.link{background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;font-size:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.wrap{display:grid;grid-template-columns:300px minmax(0,1fr);max-width:1480px;margin:0 auto}
+.side{padding:20px 16px 40px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px}
+.panel h2{font-size:17px;margin:0 0 6px}
+.count{font-weight:400;color:var(--soft)}
+label{display:block;font-size:14px;font-weight:700;margin:10px 0 4px}
+label.check{display:flex;gap:8px;align-items:center;font-weight:400;font-size:15px;min-height:40px}
+label.check input{width:20px;height:20px}
+textarea,input[type=text],input[type=password]{width:100%;font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{resize:vertical}
+textarea:focus,input[type=text]:focus,input[type=password]:focus{border-color:var(--ink);outline:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.meta{font-size:14px;color:var(--soft);margin:6px 0}
+.banner{background:var(--panel);border-radius:10px;padding:10px 12px;font-size:14px}
+.map,.nlist{list-style:none;margin:0;padding:0}
+.map button,.nlist button{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:8px 0;cursor:pointer;min-height:40px}
+.map b{display:block;font-size:15px}
+.map span,.nlist button{font-size:14px;color:var(--soft)}
+.map button:hover b{text-decoration:underline}
+.doc{padding:24px max(3vw,16px) 80px}
+.dochead h2{font:600 clamp(26px,3vw,38px)/1.08 "Source Serif 4",Georgia,serif;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sec{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:32px;padding:22px 0;border-top:1px solid var(--line)}
+.dochead+.sec{margin-top:16px}
+.body h3{font-size:20px;line-height:1.2;margin:0 0 6px}
+.lens{margin:0 0 8px;font-size:15px;color:var(--soft);font-style:italic}
+.txt{font:17px/1.68 "Source Serif 4",Georgia,serif;max-width:68ch}
+.txt p{margin:0 0 .8em}
+mark{background:var(--hl);color:inherit;padding:0 .1em;border-radius:2px}
+.margin{display:flex;flex-direction:column;gap:14px;font-size:15px;align-items:flex-start}
+.note{width:100%}
+.note .tag{font:600 23px/1 "Caveat",cursive;color:var(--red)}
+.note p{margin:3px 0}
+.note .step{font-size:14px;color:var(--soft)}
+.note .step b{color:var(--ink)}
+.note.done{opacity:.55}
+.note.mine .tag{color:var(--soft)}
+.note.good .tag{color:var(--ink)}
+.note blockquote{margin:4px 0;padding-left:10px;border-left:3px solid var(--hl);font:italic 15px/1.5 "Source Serif 4",Georgia,serif}
+.note.var{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.note.var .tag{color:var(--ink);font-size:21px}
+.note ul{margin:4px 0;padding-left:18px}
+.state{font-size:14px}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.new{animation:pen .5s ease-out}
+@keyframes pen{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+.part input.h{font-size:20px;font-weight:700;border-color:transparent;padding-left:0}
+.part input.h:focus{border-color:var(--ink);padding-left:10px}
+textarea.stich{font-size:15px;background:var(--panel);border-color:var(--panel)}
+textarea.prose{font:17px/1.65 "Source Serif 4",Georgia,serif;min-height:150px}
+.chips{display:flex;flex-direction:column;gap:6px}
+.chip{text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:14px;cursor:pointer;min-height:38px}
+.chip:hover{border-color:var(--ink)}
+.refl{margin:6px 0;padding-left:20px}
+.empty{border:2px dashed var(--line);border-radius:14px;padding:clamp(20px,4vw,40px);max-width:720px}
+.empty h2{font:600 32px/1.1 "Source Serif 4",Georgia,serif;margin:0 0 8px}
+.empty.over{border-color:var(--ink);background:var(--panel)}
+.selbar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--ink);color:var(--bg);padding:8px 10px;border-radius:12px;max-width:calc(100vw - 24px);z-index:5}
+.selbar .q{font-size:14px;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selbar button{background:var(--hl);color:#17181b;border:0;border-radius:8px;min-height:40px;padding:0 12px;font-weight:700;cursor:pointer}
+.msg{position:fixed;left:16px;bottom:16px;max-width:min(440px,calc(100vw - 32px));background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:15px;z-index:6}
+.msg:empty{display:none}
+dialog{border:0;border-radius:14px;padding:20px;width:min(560px,94vw);background:var(--bg);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 6px;font-size:20px}
+dialog p{margin:0 0 10px}
+dialog .row{justify-content:flex-end}
+@media(min-width:1100px){.side{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}}
+@media(max-width:1099px){.wrap{grid-template-columns:minmax(0,1fr)}.side{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px 28px}}
+@media(max-width:760px){.sec{grid-template-columns:minmax(0,1fr);gap:12px}.margin{padding-left:14px;border-left:2px dashed var(--line)}}
+@media(max-width:600px){.brand h1{font-size:28px}.tools{margin-left:0}.top{gap:10px 14px}}
+@media(prefers-reduced-motion:reduce){.new{animation:none}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><h1>Denkwerkstatt</h1><p>Lesen und Schreiben mit Denkanstössen am Rand, ohne Chat</p></div>
+  <div class="seg" role="group" aria-label="Modus"><button data-act="mode" data-v="lesen">Lesen</button><button data-act="mode" data-v="schreiben">Schreiben</button></div>
+  <div class="seg" role="group" aria-label="Stufe"><button data-act="level" data-v="leicht">leicht</button><button data-act="level" data-v="mittel">mittel</button><button data-act="level" data-v="stark">stark</button></div>
+  <div class="tools">
+    <label class="btn ghost" for="file">Datei öffnen</label>
+    <input type="file" id="file" hidden accept=".pdf,.docx,.doc,.txt,.md,.markdown,text/plain,application/pdf">
+    <button class="btn ghost" data-act="paste">Text einfügen</button>
+    <button class="link" data-act="reset">Neu beginnen</button>
+    <button id="ai" class="ai" data-act="settings" title="KI-Einstellungen">KI wird verbunden …</button>
+  </div>
+</header>
+<p id="levelhint" class="levelhint"></p>
+<main id="app"></main>
+<div id="selbar" class="selbar" hidden><span class="q" id="selq"></span><button data-act="selmark">Markieren</button><button data-act="selnote">Notiz dazu</button></div>
+<dialog id="dlg" aria-labelledby="dlgt"><h2 id="dlgt"></h2><p id="dlgp"></p><textarea id="dlgta" rows="5"></textarea><div class="row"><button type="button" class="btn ghost" id="dlgno">Abbrechen</button><button type="button" class="btn" id="dlgok">Übernehmen</button></div></dialog>
+<dialog id="kidlg" aria-labelledby="kit">
+  <h2 id="kit">KI-Einstellungen</h2>
+  <fieldset class="conn"><legend>Verbindung</legend>
+    <label class="check"><input type="radio" name="conn" value="claude"> Claude in der Claude-App</label>
+    <label class="check"><input type="radio" name="conn" value="direct"> Eigener API-Schlüssel, direkt aus dem Browser</label>
+    <label class="check"><input type="radio" name="conn" value="server"> Eigener Server (z. B. Railway)</label>
+  </fieldset>
+  <div id="ki-claude"><p class="meta">Die Claude-App wählt das Modell selbst. Nur verfügbar, wenn die Seite in Claude geöffnet ist.</p></div>
+  <div id="ki-direct">
+    <label for="ki-prov">Anbieter</label><select id="ki-prov"></select>
+    <p class="meta" id="ki-note"></p>
+    <div id="ki-basewrap"><label for="ki-base">Basis-URL</label><input id="ki-base" type="text" spellcheck="false"></div>
+    <div id="ki-keywrap"><label for="ki-key">API-Schlüssel</label><input id="ki-key" type="password" autocomplete="off" spellcheck="false">
+    <label class="check"><input type="checkbox" id="ki-remember"> Schlüssel auf diesem Gerät merken</label><p class="meta">Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter. Ohne «merken» ist er nach dem Schliessen des Tabs weg. Nur für dich: Für Schülerinnen und Schüler gehört der Schlüssel auf den Server.</p></div>
+    <label for="ki-model">Hauptmodell</label><input id="ki-model" type="text" list="ki-mlist" spellcheck="false" placeholder="Modellname">
+    <label for="ki-fast">Schnelles Modell (optional, für Varianten und automatische Denkanstösse)</label><input id="ki-fast" type="text" list="ki-mlist" spellcheck="false" placeholder="leer = Hauptmodell">
+    <datalist id="ki-mlist"></datalist>
+    <div class="row"><button type="button" class="mini" id="ki-list">Modelle abrufen</button></div>
+  </div>
+  <div id="ki-server">
+    <label for="ki-srv">Server-Adresse</label><input id="ki-srv" type="text" spellcheck="false" placeholder="leer = dieselbe Website, sonst z. B. https://denkwerkstatt.up.railway.app">
+    <label for="ki-pw">Zugangspasswort (falls der Server eines verlangt)</label><input id="ki-pw" type="password" autocomplete="off">
+    <p class="meta" id="ki-srvinfo"></p>
+    <div id="ki-srvchoice" hidden><label for="ki-sprov">Anbieter auf dem Server</label><select id="ki-sprov"></select>
+      <label for="ki-smodel">Modell</label><input id="ki-smodel" type="text" spellcheck="false" placeholder="leer = Vorgabe des Servers"></div>
+  </div>
+  <p class="meta" id="ki-status" role="status"></p>
+  <div class="row"><button type="button" class="btn ghost" id="ki-cancel">Abbrechen</button><button type="button" class="btn ghost" id="ki-test">Speichern und testen</button><button type="button" class="btn" id="ki-save">Speichern</button></div>
+</dialog>
+<div id="msg" class="msg" role="status" aria-live="polite"></div>
+<script>
+{
+/* Denkwerkstatt
+   KI-Anbindung, wählbar über den KI-Knopf oben rechts:
+     - Claude: wenn die Seite in der Claude-App läuft (Artefakt-Fähigkeit «sample»)
+     - Direkt: eigener API-Schlüssel, Anfrage geht vom Browser direkt zum Anbieter
+     - Server: server.js aus diesem Repo (z. B. auf Railway), Schlüssel bleibt auf dem Server
+   Für den Einbau in eine eigene Website (z. B. Gymimate) vor diesem Script setzen:
+     window.DENKWERKSTATT = { endpoint: "/api/denkwerkstatt", headers: {...}, kontext: "..." };
+   Der Endpunkt erhält POST {task, system, user, fast} und gibt {text} zurück (die Modellantwort,
+   ein JSON-Objekt als Text). Mit endpoint ist die Verbindungswahl ausgeblendet.
+   Weitere Optionen für einen Baustein:
+     stufe: "leicht" | "mittel" | "stark"   legt die Stufe fest und blendet die Auswahl aus
+     modi: ["lesen"] oder ["schreiben"]       zeigt nur diesen Modus
+     speicher: "eigener-schluessel"           eigener localStorage-Schlüssel pro Baustein */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const words = s => (String(s || '').trim().match(/\S+/g) || []).length;
+const uid = p => p + Math.random().toString(36).slice(2, 9);
+const arr = v => Array.isArray(v) ? v : [];
+const short = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
+const cfg = () => window.DENKWERKSTATT || {};
+const KEY = cfg().speicher || 'denkwerkstatt-v1';
+const LENSES = ['Was ist für meinen Unterricht brauchbar?', 'Belege und Methodik', 'Fachbegriffe und Fehlvorstellungen', 'Gegenpositionen und offene Fragen', 'Was müssten Schülerinnen und Schüler selbst prüfen?'];
+const HINT = {
+  leicht: 'Stufe leicht: Die KI liefert Inhalte direkt und ergänzt wenige Denkanstösse.',
+  mittel: 'Stufe mittel: Du gibst die Richtung vor. Die KI baut auf deinen Entscheidungen auf und fordert dich heraus.',
+  stark: 'Stufe stark: sokratisch. Die KI stellt nur Fragen und gibt Hinweise, aber keine fertigen Inhalte.'
+};
+const np = (h = '', stich = '', text = '') => ({ id: uid('p'), h, stich, text });
+
+function blank(level) {
+  return { v: 1, mode: 'lesen', level: level || 'mittel', sample: false, doc: { title: '', sections: [] }, purpose: '', lens: '', map: {}, notes: [], prov: [], cmp: null, kern: '', auto: false, focusPart: '',
+    w: { titel: '', ziel: '', publikum: '', kern: '', parts: [np(), np(), np()], aiw: 0, refl: '' }, variants: {} };
+}
+function sampleState() {
+  const s = blank('mittel');
+  s.sample = true;
+  s.doc = { title: 'Enzyme im Waschmittel', sections: [
+    { id: 's1', head: 'Warum Waschmittel Enzyme enthalten', text: 'Viele Flecken bestehen aus Eiweiss, Fett oder Stärke: Blut, Ei, Gras, Saucen, Schokolade. Wasser und Tenside allein lösen solche Rückstände bei niedrigen Temperaturen nur schlecht. Moderne Waschmittel enthalten deshalb Enzyme, die grosse Moleküle in kleinere, wasserlösliche Bruchstücke zerlegen.\n\nProteasen spalten Proteine, Lipasen Fette und Amylasen Stärke. Hinzu kommen oft Cellulasen, die abstehende Fasern glätten und so Farben frischer wirken lassen.' },
+    { id: 's2', head: 'Weniger Wärme, gleiche Wirkung', text: 'Weil Enzyme als Katalysatoren die Aktivierungsenergie einer Reaktion senken, läuft der Abbau auch bei 30 oder 40 Grad ausreichend schnell ab. Das spart Energie, denn ein grosser Teil des Stromverbrauchs einer Waschmaschine entfällt auf das Aufheizen des Wassers.\n\nHersteller werben deshalb gern damit, dass ein kühler Waschgang heute so sauber wasche wie früher ein Kochwaschgang. Ob das für jede Verschmutzung gilt, hängt allerdings auch von Waschdauer, Wasserhärte und Dosierung ab.' },
+    { id: 's3', head: 'Enzyme aus Bakterien', text: 'Die meisten Waschmittelenzyme stammen aus Bakterien der Gattung Bacillus. Diese wachsen in grossen Fermentern und geben die Enzyme ins Nährmedium ab, aus dem sie anschliessend gereinigt werden. Mit gezielten Veränderungen im Erbgut lassen sich Varianten herstellen, die in alkalischer Waschlauge stabil bleiben und auch bei tiefen Temperaturen aktiv sind.' },
+    { id: 's4', head: 'Eine Lektion aus den Anfängen', text: 'Als Enzyme in den 1960er-Jahren erstmals in grossem Stil eingesetzt wurden, entwickelten Beschäftigte in der Produktion Atemwegsallergien gegen den feinen Enzymstaub. Die Industrie reagierte, indem sie die Enzyme in staubfreie Körnchen einschloss oder in flüssigen Waschmitteln löste. Für Verbraucherinnen und Verbraucher gilt das Risiko heute als gering, in den Werken gelten aber weiterhin strenge Grenzwerte.' },
+    { id: 's5', head: 'Was offen bleibt', text: 'Enzyme gelten als biologisch gut abbaubar. Ihre Herstellung braucht jedoch Energie, Nährstoffe und Reinigungsschritte, und nicht jede Ersparnis beim Waschen gleicht diesen Aufwand vollständig aus. Eine faire Bilanz müsste deshalb den ganzen Lebensweg betrachten, vom Fermenter bis zur Kläranlage.' }
+  ] };
+  s.purpose = 'Taugt der Text als Einstieg ins Thema Enzyme in der 2. Klasse?';
+  s.lens = 'Was ist für meinen Unterricht brauchbar?';
+  s.map = {
+    s1: { titel: 'Flecken und ihre Enzyme', linse: 'Achte darauf, welche Fleckenart sich für einen Schülerversuch eignet.' },
+    s2: { titel: 'Katalyse spart Energie', linse: 'Hier liegt der fachliche Kern: Wie genau wird die Rolle der Temperatur begründet?' },
+    s3: { titel: 'Herkunft aus Bakterien', linse: 'Prüfe, ob dieser Teil zum Einstieg gehört oder später zur Biotechnologie.' },
+    s4: { titel: 'Allergien in der Produktion', linse: 'Achte darauf, wie ein Risiko erkannt und gelöst wurde.' },
+    s5: { titel: 'Offene Bilanz', linse: 'Wo bleibt der Text vage, und was könnten SuS selbst nachprüfen?' }
+  };
+  s.notes = [{ id: 'n1', sec: 's1', quote: 'Proteasen spalten Proteine, Lipasen Fette und Amylasen Stärke.', text: 'Passt zum Versuch mit Eiweiss- und Stärkefleck.' }];
+  s.prov = [
+    { id: 'pa', mode: 'lesen', src: 'karte', sec: 's2', art: 'Annahme', text: 'Der Text setzt voraus, dass schnellerer Abbau automatisch saubere Wäsche heisst. Für die 2. Klasse ist eher der Schritt von Aktivierungsenergie zu Temperatur der Stolperstein.', schritt: 'Notiere, wie du den Zusammenhang ohne Formel zeigen würdest.', status: 'offen', grund: '' },
+    { id: 'pb', mode: 'lesen', src: 'karte', sec: 's3', art: 'Alternative', text: 'Die Herkunft der Enzyme könnte selbst der Aufhänger sein: Warum funktionieren Enzyme aus Bakterien ausgerechnet in Lauge?', schritt: 'Entscheide, ob dein Einstieg beim Fleck oder beim Bakterium beginnt.', status: 'offen', grund: '' },
+    { id: 'pc', mode: 'schreiben', src: 'pruefen', sec: 'pw1', art: 'Frage', text: 'Die SuS bekommen das Rätsel, aber noch keine Gelegenheit zur eigenen Vorhersage. Was sollen sie notieren, bevor du auflöst?', schritt: 'Ergänze eine Vorhersage-Aufgabe in deinen Stichworten.', status: 'offen', grund: '' },
+    { id: 'pd', mode: 'schreiben', src: 'pruefen', sec: 'pw2', art: 'Gegenargument', text: 'Das Bild der Schere ist anschaulich, legt aber nahe, dass das Enzym dabei verbraucht wird.', schritt: 'Überlege, wie dein Text zeigt, dass das Enzym danach unverändert ist.', status: 'offen', grund: '' }
+  ];
+  s.w = { titel: 'Warum wäscht 30 Grad sauber?', ziel: 'SuS verstehen, warum ein Waschmittel bei 30 Grad wirkt, und stellen selbst eine Frage dazu.', publikum: '2. Klasse Gymnasium, Einstieg Enzyme', kern: 'Enzyme beschleunigen Reaktionen, ohne dass es heisser werden muss.', aiw: 0, refl: '',
+    parts: [
+      { id: 'pw1', h: 'Einstieg: der Fleck', stich: '- Eifleck auf Stoffstück zeigen\n- Frage: Wieso geht das bei 30 °C raus?', text: 'Stell dir vor, auf deinem Lieblingspulli klebt ein Eifleck. Die Waschmaschine läuft nur mit 30 Grad, und trotzdem ist der Fleck danach weg. Wie kann das sein, wenn Wasser und Seife allein bei dieser Temperatur kaum etwas ausrichten?' },
+      { id: 'pw2', h: 'Was Enzyme tun', stich: '- Protease zerlegt Eiweiss in kleine Stücke\n- Bild: Schere\n- Aktivierungsenergie erst später', text: '' },
+      { id: 'pw3', h: 'Eure Frage', stich: '', text: '' }
+    ] };
+  return s;
+}
+
+let S = null;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+if (!S || S.v !== 1) S = sampleState();
+let saveT;
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300); }
+
+/* ---------- KI ---------- */
+const capCache = {};
+function capability(name) {
+  if (!capCache[name]) capCache[name] = (async () => {
+    for (let i = 0; i < 24 && !(window.claude && window.claude.use); i++) await new Promise(r => setTimeout(r, 250));
+    if (!(window.claude && window.claude.use)) return null;
+    try { return await window.claude.use(name); } catch (e) { return null; }
+  })();
+  return capCache[name];
+}
+const RULES = `REGELN FÜR DENKANSTÖSSE
+- höchstens zwei Sätze, spezifisch für diesen Text und das Ziel der Person, nie allgemein oder offensichtlich
+- jeder Denkanstoss hat im Feld "schritt" einen kurzen, umsetzbaren nächsten Schritt
+- sachlicher Ton, keine Warnungen, kein «Achtung», keine Emojis
+- lieber wenige gute als viele; wo es nichts Wesentliches zu sagen gibt, keinen
+Schreibe Deutsch in Schweizer Rechtschreibung (ss statt ß).
+Antworte ausschliesslich mit einem JSON-Objekt nach dem angegebenen Schema, ohne Text davor oder danach und ohne Codeblock.`;
+const LEVEL = {
+  leicht: 'STUFE leicht: Du darfst Inhalte direkt liefern. Denkanstösse sparsam.',
+  mittel: 'STUFE mittel: Die Person gibt die Richtung vor. Baue auf ihren Gedanken auf, nimm Ergebnisse nicht vorweg und fordere sie heraus.',
+  stark: 'STUFE stark: sokratisch. Formuliere nur Fragen und vage Hinweise. Verrate keine Inhalte, Lösungen oder Zusammenfassungen.'
+};
+const LINSE = {
+  leicht: 'ein bis zwei Sätze, was dieser Abschnitt unter der Linse für das Leseziel hergibt',
+  mittel: 'ein Satz, worauf die Person beim Lesen dieses Abschnitts achten soll, ohne das Ergebnis vorwegzunehmen',
+  stark: 'eine Frage, die das Lesen dieses Abschnitts leitet'
+};
+const TASK = {
+  karte: d => `AUFGABE: Erstelle eine Landkarte des Dokuments für Leseziel und Linse der Person. Gib für jeden Abschnitt (gleiche id wie in den Daten) einen kurzen Titel (höchstens 6 Wörter) und im Feld "linse" ${LINSE[S.level]}. Fasse den Text nicht zusammen: Die Person soll das Wichtige selbst lesen. Gib dazu höchstens ${Math.min(6, Math.max(1, Math.ceil(d.abschnitte.length / 3)))} Denkanstösse zu Abschnitten, bei denen sich für das Leseziel genaueres Hinsehen lohnt. Art: eine von Annahme, Alternative, Gegenargument, Spannung, Deutung, Frage.
+SCHEMA: {"abschnitte":[{"id":"s1","titel":"…","linse":"…"}],"anstoesse":[{"id":"s3","art":"Annahme","text":"…","schritt":"…"}]}`,
+  abgleich: () => `AUFGABE: Die Person hat den Text gelesen und ihre Kernpunkte formuliert. Vergleiche Kernpunkte und Notizen mit dem Text im Hinblick auf ihr Leseziel. Schreibe ihre Kernpunkte nicht neu und liefere keine eigene Zusammenfassung.
+"getroffen": 1 bis 3 konkrete Punkte, die sie gut erfasst hat (ehrlich, nur wenn zutreffend).
+"luecken": höchstens 3 für ihr Ziel wichtige Stellen, die sie übergangen hat, je mit Abschnitts-id. ${S.level === 'stark' ? 'Verrate den Inhalt nicht, verweise auf die Stelle und stelle eine Frage.' : 'Nenne knapp, was dort steht und warum es für ihr Ziel zählt.'}
+"lesarten": höchstens 2 Stellen, die man anders deuten kann als sie es tut, je mit Abschnitts-id.
+"frage": eine Reflexionsfrage zu ihrem Verständnis oder dazu, wie sicher sie sich ist.
+SCHEMA: {"getroffen":["…"],"luecken":[{"id":"s2","text":"…","schritt":"…"}],"lesarten":[{"id":"s4","text":"…","schritt":"…"}],"frage":"…"}`,
+  absatz: () => `AUFGABE: Formuliere den Abschnitt mit der Überschrift aus den Daten als zusammenhängenden Text, ausschliesslich auf Grundlage der Stichworte der Person. Füge keine neuen Fakten, Beispiele oder Argumente hinzu. Fehlt etwas Nötiges, setze an der Stelle eckige Klammern mit einem kurzen Hinweis, zum Beispiel [Beispiel ergänzen]. Passe Ton und Länge an Ziel und Publikum an. "offen": ein Satz dazu, was in den Stichworten fehlt oder unklar ist, sonst ein leerer String.
+SCHEMA: {"text":"…","offen":"…"}`,
+  varianten: d => `AUFGABE: Schreibe drei deutlich verschiedene Varianten des Textes, zum Beispiel knapper, anschaulicher, sachlicher oder anders aufgebaut. Der Inhalt bleibt gleich, keine neuen Fakten. ${d.ist_auszug ? 'Der Text ist ein Auszug; jede Variante muss sich nahtlos an seiner Stelle einfügen lassen.' : ''} "label": 2 bis 4 Wörter, die den Unterschied benennen.
+SCHEMA: {"varianten":[{"label":"…","text":"…"}]}`,
+  pruefen: d => `AUFGABE: Lies den Entwurf als kritische Kollegin. Gib höchstens ${d.max} Denkanstösse zu konkreten Stellen, je mit der id des Abschnitts oder "gesamt" für den ganzen Text. Art: eine von Gegenargument, Denkfehler, Alternative, Lücke, Klarheit, Frage, Stärke. Beziehe dich auf Ziel, Publikum und Kernaussage. Formuliere nichts für die Person um und schreibe keine Ersatztexte. Wiederhole nichts aus "bereits". ${S.level === 'stark' ? 'Formuliere jeden Denkanstoss als Frage.' : ''} Ist eine Stelle wirklich gelungen, darfst du höchstens einen Denkanstoss der Art "Stärke" geben, der benennt, was gelingt.
+SCHEMA: {"anstoesse":[{"id":"p1","art":"Gegenargument","text":"…","schritt":"…"}]}`,
+  gliederung: () => `AUFGABE: Prüfe die Gliederung der Person (Überschriften und Stichworte), nicht die Formulierung. Gib höchstens 4 Denkanstösse zu fehlenden Teilen, Reihenfolge, Gewichtung und Passung zu Ziel und Kernaussage, je mit Abschnitts-id oder "gesamt". Schlage keine komplette neue Gliederung vor. ${S.level === 'stark' ? 'Formuliere jeden Denkanstoss als Frage.' : ''}
+SCHEMA: {"anstoesse":[{"id":"gesamt","art":"Lücke","text":"…","schritt":"…"}]}`
+};
+function buildPrompt(task, d) {
+  return {
+    system: ['Du bist Denkpartner in der «Denkwerkstatt», einem Lese- und Schreibwerkzeug nach Advait Sarkars Ansatz «AI should challenge, not obey». Du nimmst der Person das Denken nicht ab, sondern regst es an. Ehrlich, konkret, ohne Lob um des Lobes willen.',
+      cfg().kontext || 'Die Person ist Lehrperson an einem Schweizer Gymnasium.', LEVEL[S.level], RULES].join('\n\n'),
+    user: [TASK[task](d), 'DATEN:', JSON.stringify(d)].join('\n\n')
+  };
+}
+function parseJSON(t) {
+  t = String(t || '').replace(/^\s*```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  try { return JSON.parse(t); } catch (e) {}
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+  throw { message: 'Die Antwort der KI war nicht lesbar. Bitte nochmals versuchen.' };
+}
+async function ai(task, d, tier) {
+  const p = buildPrompt(task, d);
+  return parseJSON(await callLLM(p.system, p.user, { task, fast: tier === 'quick' }));
+}
+
+/* ---------- Anbieter ---------- */
+const PROV = {
+  anthropic: { name: 'Anthropic (Claude)', base: 'https://api.anthropic.com/v1', models: ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5'], note: 'Funktioniert direkt aus dem Browser.' },
+  openai: { name: 'OpenAI', base: 'https://api.openai.com/v1', models: [], note: 'Funktioniert direkt aus dem Browser. Modellnamen mit «Modelle abrufen» laden.' },
+  google: { name: 'Google Gemini', base: 'https://generativelanguage.googleapis.com/v1beta', models: [], note: 'Funktioniert direkt aus dem Browser. Modellnamen mit «Modelle abrufen» laden.' },
+  mistral: { name: 'Mistral (EU)', base: 'https://api.mistral.ai/v1', models: ['mistral-large-latest', 'mistral-medium-latest', 'mistral-small-latest'], note: 'Mistral blockiert Anfragen direkt aus dem Browser. Nutze dafür den eigenen Server.' },
+  infomaniak: { name: 'Infomaniak (CH)', base: 'https://api.infomaniak.com/1/ai/PRODUKT-ID/openai', models: [], editBase: true, note: 'Ersetze PRODUKT-ID durch die ID deines KI-Produkts aus dem Infomaniak-Manager. Direkte Browser-Anfragen werden vermutlich blockiert; sicher geht es über den eigenen Server.' },
+  openrouter: { name: 'OpenRouter (viele Modelle, ein Schlüssel)', base: 'https://openrouter.ai/api/v1', models: [], note: 'Funktioniert direkt aus dem Browser. Modellnamen haben die Form anbieter/modell.' },
+  compat: { name: 'Lokal oder eigener Server (OpenAI-kompatibel)', base: 'http://localhost:11434/v1', models: [], editBase: true, nokey: true, note: 'Ollama: http://localhost:11434/v1 (dafür OLLAMA_ORIGINS auf die Adresse dieser Seite setzen), LM Studio: http://localhost:1234/v1. Kleine Modelle unter etwa 8B liefern oft kein sauberes JSON.' }
+};
+const KKEY = 'denkwerkstatt-ki';
+let K = { conn: '', provider: 'anthropic', base: {}, model: {}, fast: {}, remember: false, server: '', sprov: '', smodel: '' };
+try { Object.assign(K, JSON.parse(localStorage.getItem(KKEY)) || {}); } catch (e) {}
+const memKeys = {};
+function getKey(name) { try { return localStorage.getItem('dw-key-' + name) || sessionStorage.getItem('dw-key-' + name) || memKeys[name] || ''; } catch (e) { return memKeys[name] || ''; } }
+function setKey(name, v) {
+  memKeys[name] = v;
+  try { localStorage.removeItem('dw-key-' + name); sessionStorage.removeItem('dw-key-' + name); if (v) (K.remember ? localStorage : sessionStorage).setItem('dw-key-' + name, v); } catch (e) {}
+}
+function saveK() { try { localStorage.setItem(KKEY, JSON.stringify(K)); } catch (e) {} }
+const ENV = { claude: false, server: null };
+function conn() { if (cfg().endpoint) return 'server'; if (K.conn) return K.conn; if (ENV.server) return 'server'; if (ENV.claude) return 'claude'; return 'direct'; }
+const baseOf = p => (K.base[p] || PROV[p].base).replace(/\/+$/, '');
+const srvUrl = () => (K.server || '').replace(/\/+$/, '');
+async function fetchJSON(url, init) {
+  let r;
+  try { r = await fetch(url, init); }
+  catch (e) { let h = url; try { h = new URL(url, location.href).host; } catch (_) {} throw { message: 'Keine Verbindung zu ' + h + '. Mögliche Gründe: falsche Adresse, der Anbieter erlaubt keine Anfragen direkt aus dem Browser, oder die Seite läuft in Claude, wo externe Verbindungen gesperrt sind. Dann hilft der eigene Server.' }; }
+  const t = await r.text();
+  if (!r.ok) {
+    let m = t; try { const j = JSON.parse(t); m = (j.error && (j.error.message || j.error)) || j.message || j.detail || t; } catch (_) {}
+    throw { status: r.status, message: 'Fehler ' + r.status + ': ' + short(typeof m === 'string' ? m : JSON.stringify(m), 220) };
+  }
+  try { return JSON.parse(t); } catch (e) { throw { message: 'Unerwartete Antwort vom Anbieter.' }; }
+}
+async function directCall(prov, model, system, user) {
+  const base = baseOf(prov), key = getKey(prov);
+  if (prov === 'anthropic') {
+    const j = await fetchJSON(base + '/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model, max_tokens: 4000, system, messages: [{ role: 'user', content: user }] }) });
+    return arr(j.content).filter(c => c.type === 'text').map(c => c.text).join('');
+  }
+  if (prov === 'google') {
+    const j = await fetchJSON(base + '/models/' + encodeURIComponent(model.replace(/^models\//, '')) + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }], generationConfig: { responseMimeType: 'application/json' } }) });
+    return arr(((j.candidates || [])[0] || {}).content && j.candidates[0].content.parts).map(x => x.text || '').join('');
+  }
+  const h = { 'content-type': 'application/json' }; if (key) h.authorization = 'Bearer ' + key;
+  const body = { model, messages: [{ role: 'system', content: system }, { role: 'user', content: user }], response_format: { type: 'json_object' } };
+  let j;
+  try { j = await fetchJSON(base + '/chat/completions', { method: 'POST', headers: h, body: JSON.stringify(body) }); }
+  catch (e) { if (e.status !== 400 && e.status !== 422) throw e; delete body.response_format; j = await fetchJSON(base + '/chat/completions', { method: 'POST', headers: h, body: JSON.stringify(body) }); }
+  return ((j.choices || [])[0] || {}).message ? j.choices[0].message.content || '' : '';
+}
+async function callLLM(system, user, o) {
+  const mode = conn();
+  if (mode === 'claude') {
+    const s = await capability('sample');
+    if (!s) throw { code: 'no_ai' };
+    return (await s(system + '\n\n' + user, { modelTier: o.fast ? 'quick' : 'default' })).text;
+  }
+  if (mode === 'server') {
+    const c = cfg(), url = c.endpoint || (srvUrl() ? srvUrl() + '/api/llm' : 'api/llm');
+    const h = Object.assign({ 'content-type': 'application/json' }, c.headers || {}); const pw = getKey('server'); if (pw && !c.endpoint) h['x-app-password'] = pw;
+    const body = { task: o.task, system, user, fast: !!o.fast };
+    if (!c.endpoint && K.sprov) { body.provider = K.sprov; if (K.smodel) body.model = K.smodel; }
+    try { return (await fetchJSON(url, { method: 'POST', headers: h, body: JSON.stringify(body) })).text || ''; }
+    catch (e) { if (e.status === 401) throw { code: 'no_cfg', message: 'Der Server verlangt ein Zugangspasswort. Trage es in den KI-Einstellungen ein.' }; throw e; }
+  }
+  const p = K.provider, model = (o.fast && K.fast[p]) || K.model[p];
+  if (!PROV[p] || !model || (!PROV[p].nokey && !getKey(p))) throw { code: 'no_cfg' };
+  return directCall(p, model, system, user);
+}
+async function listModels(p) {
+  const base = baseOf(p), key = getKey(p);
+  if (p === 'anthropic') return arr((await fetchJSON(base + '/models?limit=100', { headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' } })).data).map(m => m.id);
+  if (p === 'google') return arr((await fetchJSON(base + '/models?pageSize=200', { headers: { 'x-goog-api-key': key } })).models).filter(m => arr(m.supportedGenerationMethods).includes('generateContent')).map(m => m.name.replace(/^models\//, ''));
+  return arr((await fetchJSON(base + '/models', { headers: key ? { authorization: 'Bearer ' + key } : {} })).data).map(m => m.id).sort();
+}
+async function probeServer(url) {
+  try { const j = await fetchJSON((url ? url + '/' : '') + 'api/config', { headers: {} }); return j && j.denkwerkstatt ? j : null; } catch (e) { return null; }
+}
+function badge() {
+  const b = $('#ai'), m = conn();
+  if (cfg().endpoint) b.textContent = 'KI: über die Website';
+  else if (m === 'claude') b.textContent = ENV.claude ? 'KI: Claude' : 'KI einrichten';
+  else if (m === 'server') b.textContent = ENV.server ? 'KI: Server, ' + (K.sprov && K.smodel ? K.smodel : ENV.server.model || ENV.server.provider || 'bereit') : 'KI: Server';
+  else { const p = K.provider, mo = K.model[p]; b.textContent = mo && (PROV[p].nokey || getKey(p)) ? 'KI: ' + mo : 'KI einrichten'; }
+}
+
+/* ---------- Einstellungsdialog ---------- */
+const kd = $('#kidlg');
+let kProv = K.provider;
+function kFillProv(p) {
+  kProv = p;
+  $('#ki-prov').value = p;
+  $('#ki-note').textContent = PROV[p].note || '';
+  $('#ki-base').value = K.base[p] || PROV[p].base;
+  $('#ki-basewrap').hidden = !PROV[p].editBase;
+  $('#ki-keywrap').hidden = !!PROV[p].nokey && p !== 'compat';
+  $('#ki-key').value = getKey(p);
+  $('#ki-key').placeholder = PROV[p].nokey ? 'meist leer lassen' : '';
+  $('#ki-model').value = K.model[p] || '';
+  $('#ki-fast').value = K.fast[p] || '';
+  $('#ki-mlist').innerHTML = PROV[p].models.map(m => `<option value="${esc(m)}">`).join('');
+}
+function kStoreProv() {
+  const p = kProv;
+  K.base[p] = PROV[p].editBase ? $('#ki-base').value.trim() : PROV[p].base;
+  K.model[p] = $('#ki-model').value.trim(); K.fast[p] = $('#ki-fast').value.trim();
+  K.remember = $('#ki-remember').checked; setKey(p, $('#ki-key').value.trim());
+}
+function kSections() {
+  const c = (kd.querySelector('input[name=conn]:checked') || {}).value || 'direct';
+  $('#ki-claude').hidden = c !== 'claude'; $('#ki-direct').hidden = c !== 'direct'; $('#ki-server').hidden = c !== 'server';
+}
+async function kServerInfo() {
+  const url = $('#ki-srv').value.trim().replace(/\/+$/, ''), info = $('#ki-srvinfo');
+  info.textContent = 'Prüfe Server …';
+  const j = await probeServer(url);
+  if (!j) { info.textContent = url ? 'Unter dieser Adresse antwortet kein Denkwerkstatt-Server.' : 'Diese Website hat keinen Denkwerkstatt-Server. Trage die Adresse deines Servers ein.'; $('#ki-srvchoice').hidden = true; return; }
+  info.textContent = 'Server gefunden. Vorgabe: ' + (j.provider || 'kein Anbieter') + (j.model ? ', ' + j.model : '') + (j.fast && j.fast !== j.model ? ', schnell: ' + j.fast : '') + (j.password ? '. Verlangt ein Zugangspasswort.' : '.');
+  $('#ki-srvchoice').hidden = !j.choice;
+  if (j.choice) { $('#ki-sprov').innerHTML = '<option value="">Vorgabe des Servers</option>' + arr(j.providers).map(p => `<option value="${esc(p)}">${esc(PROV[p] ? PROV[p].name : p)}</option>`).join(''); $('#ki-sprov').value = K.sprov || ''; $('#ki-smodel').value = K.smodel || ''; }
+}
+function openSettings() {
+  if (cfg().endpoint) { msg('Die KI wird von dieser Website bereitgestellt.'); return; }
+  kd.querySelectorAll('input[name=conn]').forEach(r => { r.checked = r.value === conn(); if (r.value === 'claude') { r.disabled = !ENV.claude; r.parentElement.hidden = !ENV.claude; } });
+  $('#ki-prov').innerHTML = Object.keys(PROV).map(p => `<option value="${p}">${esc(PROV[p].name)}</option>`).join('');
+  $('#ki-remember').checked = !!K.remember;
+  kFillProv(K.provider);
+  $('#ki-srv').value = K.server || ''; $('#ki-pw').value = getKey('server');
+  $('#ki-status').textContent = '';
+  kSections(); if (conn() === 'server') kServerInfo();
+  try { kd.showModal(); } catch (e) { kd.setAttribute('open', ''); }
+}
+function kSave() {
+  K.conn = (kd.querySelector('input[name=conn]:checked') || {}).value || '';
+  kStoreProv(); K.provider = kProv;
+  K.server = $('#ki-srv').value.trim().replace(/\/+$/, ''); setKey('server', $('#ki-pw').value);
+  K.sprov = $('#ki-srvchoice').hidden ? '' : $('#ki-sprov').value; K.smodel = $('#ki-srvchoice').hidden ? '' : $('#ki-smodel').value.trim();
+  saveK();
+  if (K.conn === 'server') probeServer(srvUrl()).then(j => { ENV.server = j; badge(); }); else badge();
+}
+kd.addEventListener('change', e => {
+  if (e.target.name === 'conn') { kSections(); if (e.target.value === 'server') kServerInfo(); }
+  if (e.target.id === 'ki-prov') { kStoreProv(); kFillProv(e.target.value); }
+  if (e.target.id === 'ki-srv') kServerInfo();
+});
+$('#ki-cancel').onclick = () => kd.close();
+$('#ki-save').onclick = () => { kSave(); kd.close(); msg('KI-Einstellungen gespeichert.'); };
+$('#ki-test').onclick = async () => {
+  kSave(); const st = $('#ki-status'); st.textContent = 'Teste die Verbindung …';
+  try {
+    const t = await callLLM('Antworte ausschliesslich mit einem JSON-Objekt.', 'Gib genau dieses JSON zurück: {"ok": true}', { task: 'test' });
+    const j = parseJSON(t);
+    st.textContent = j && j.ok ? 'Verbindung funktioniert, das Modell liefert sauberes JSON.' : 'Verbindung steht, aber die Antwort war nicht wie erwartet: ' + short(t, 120);
+  } catch (e) { st.textContent = (e && e.message) || (e && e.code === 'no_cfg' ? 'Es fehlen Angaben: Anbieter, Modell und API-Schlüssel.' : 'Test fehlgeschlagen.'); }
+};
+$('#ki-list').onclick = async () => {
+  kStoreProv(); const st = $('#ki-status'); st.textContent = 'Lade Modelle …';
+  try { const l = await listModels(kProv); $('#ki-mlist').innerHTML = l.map(m => `<option value="${esc(m)}">`).join(''); st.textContent = l.length + ' Modelle gefunden. Klicke ins Modellfeld, um eines zu wählen.'; }
+  catch (e) { st.textContent = (e && e.message) || 'Modelle konnten nicht geladen werden.'; }
+};
+
+/* ---------- Dateien ---------- */
+function toSections(raw) {
+  const text = String(raw || '').replace(/\r\n?/g, '\n').replace(/ /g, ' ');
+  const blocks = text.split(/\n\s*\n+/).map(b => b.trim()).filter(b => b && !/^\d{1,4}$/.test(b) && b.length > 1);
+  const isHead = b => /^#{1,6}\s/.test(b) || (b.length <= 80 && !b.includes('\n') && !/[.!?;,:]$/.test(b) && words(b) <= 10 && (/^\d+(\.\d+)*\.?\s+\S/.test(b) || /^[A-ZÄÖÜ]/.test(b)));
+  const total = blocks.reduce((a, b) => a + b.length, 0);
+  let target = Math.max(900, Math.ceil(total / 36)), secs = [];
+  for (let round = 0; round < 4; round++) {
+    secs = []; let cur = null;
+    for (const b of blocks) {
+      const clean = b.replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
+      if (isHead(b)) {
+        if (cur && !cur.paras.length) cur.head += ' – ' + clean; else { cur = { head: clean, paras: [], len: 0 }; secs.push(cur); }
+        continue;
+      }
+      if (!cur || (cur.len + clean.length > target && cur.paras.length)) { cur = { head: '', paras: [], len: 0 }; secs.push(cur); }
+      cur.paras.push(clean); cur.len += clean.length;
+    }
+    secs = secs.filter(s => s.paras.length);
+    if (secs.length <= 45) break;
+    target *= 2;
+  }
+  while (secs.length > 45) {
+    const m = [];
+    for (let i = 0; i < secs.length; i += 2) {
+      const a = secs[i], b = secs[i + 1];
+      m.push(b ? { head: a.head || b.head, paras: a.paras.concat(b.head && a.head ? [b.head] : [], b.paras) } : a);
+    }
+    secs = m;
+  }
+  return secs.map((s, i) => ({ id: 's' + (i + 1), head: s.head, text: s.paras.join('\n\n') }));
+}
+async function pdfText(buf) {
+  const lib = window.pdfjsLib;
+  if (!lib) throw { message: 'Die PDF-Bibliothek konnte nicht geladen werden. Füge den Text stattdessen ein.' };
+  const pdf = await lib.getDocument({ data: buf, isEvalSupported: false }).promise;
+  let out = '';
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const tc = await (await pdf.getPage(n)).getTextContent();
+    const lines = []; let line = '', lastY = null, lastH = 10;
+    for (const it of tc.items) {
+      if (!('str' in it)) continue;
+      const y = it.transform[5], h = Math.abs(it.transform[3]) || it.height || lastH;
+      if (lastY !== null && Math.abs(y - lastY) > h * 0.5) { lines.push({ t: line, y: lastY, h: lastH }); line = ''; }
+      line += it.str; lastY = y; lastH = h;
+      if (it.hasEOL) { lines.push({ t: line, y, h }); line = ''; lastY = null; }
+    }
+    if (line) lines.push({ t: line, y: lastY, h: lastH });
+    let prev = null;
+    for (const l of lines) {
+      const t = l.t.trim();
+      if (!t) { if (prev) out += '\n\n'; prev = null; continue; }
+      if (prev) out += Math.abs(prev.y - l.y) > prev.h * 1.75 ? '\n\n' : '\n';
+      out += t; prev = l;
+    }
+    out += '\n\n';
+  }
+  return out.replace(/(\p{L})-\n(?=\p{Ll})/gu, '$1').replace(/([^\n])\n(?!\n)/g, '$1 ');
+}
+async function docxText(buf) {
+  if (!window.mammoth) throw { message: 'Die Word-Bibliothek konnte nicht geladen werden. Füge den Text stattdessen ein.' };
+  const r = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+  const d = new DOMParser().parseFromString(r.value, 'text/html'), out = [];
+  d.body.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li').forEach(el => {
+    if (el.tagName === 'LI' && el.querySelector('p')) return;
+    const t = el.textContent.replace(/\s+/g, ' ').trim();
+    if (!t) return;
+    out.push(/^H\d$/.test(el.tagName) ? '# ' + t : el.tagName === 'LI' ? '• ' + t : t);
+  });
+  return out.join('\n\n');
+}
+function mdText(t) {
+  return t.replace(/\r\n?/g, '\n').replace(/```[^\n]*\n?/g, '').replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '\n• ').replace(/^\s*(\d+)\.\s+/gm, '\n$1. ').replace(/(\*\*|__)(.+?)\1/g, '$2').replace(/\*(\S[^*]*?)\*/g, '$1')
+    .replace(/(^|\W)_(\S[^_]*?)_(?=\W|$)/g, '$1$2').replace(/^>\s?/gm, '').replace(/^(#{1,6}\s.*)$/gm, '\n$1\n');
+}
+async function importFile(f) {
+  if (!f) return;
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  msg('Lese «' + f.name + '» …', 0);
+  try {
+    let t;
+    if (ext === 'pdf') t = await pdfText(await f.arrayBuffer());
+    else if (ext === 'docx') t = await docxText(await f.arrayBuffer());
+    else if (ext === 'doc') throw { message: 'Alte .doc-Dateien kann der Browser nicht lesen. Speichere die Datei in Word als .docx oder als PDF.' };
+    else if (ext === 'md' || ext === 'markdown') t = mdText(await f.text());
+    else t = await f.text();
+    loadText(f.name.replace(/\.[^.]+$/, ''), t);
+  } catch (e) { showErr(e); }
+}
+function loadText(title, t) {
+  const secs = toSections(t);
+  if (!secs.length) throw { message: 'In der Datei wurde kein Text gefunden. Gescannte PDFs ohne Textebene gehen nicht.' };
+  const wasSample = S.sample;
+  if (wasSample) { const lv = S.level; S = blank(lv); }
+  S.doc = { title, sections: secs }; S.map = {}; S.notes = []; S.cmp = null; S.kern = ''; S.purpose = wasSample ? '' : S.purpose;
+  S.prov = S.prov.filter(p => p.mode !== 'lesen'); S.mode = 'lesen';
+  save(); render(); window.scrollTo(0, 0);
+  msg(secs.length + (secs.length === 1 ? ' Abschnitt' : ' Abschnitte') + ' geladen. Formuliere dein Leseziel und erstelle dann die Landkarte.');
+}
+
+/* ---------- Darstellung ---------- */
+const P = id => S.prov.find(p => p.id === id);
+const part = id => S.w.parts.find(p => p.id === id);
+const secTitle = (s, i) => (S.map[s.id] && S.map[s.id].titel) || s.head || 'Abschnitt ' + (i + 1);
+function card(p) {
+  const id = esc(p.id), open = p.status === 'offen';
+  return `<div class="note prov${open ? '' : ' done'}${p.neu ? ' new' : ''}"><span class="tag">${esc(p.art)}</span><p>${esc(p.text)}</p>${p.schritt ? `<p class="step"><b>Nächster Schritt:</b> ${esc(p.schritt)}</p>` : ''}${open
+    ? `<div class="acts"><button class="mini" data-act="take" data-id="${id}">Aufgreifen</button><button class="mini" data-act="drop" data-id="${id}">Verwerfen</button></div>`
+    : `<p class="state">${p.status === 'aufgegriffen' ? 'Aufgegriffen' : 'Verworfen'}${p.grund ? ': ' + esc(p.grund) : ''}. <button class="link" data-act="undo" data-id="${id}">Rückgängig</button></p>`}</div>`;
+}
+function noteCard(n) {
+  return `<div class="note mine"><span class="tag">Meine Notiz</span>${n.quote ? `<blockquote>${esc(n.quote)}</blockquote>` : ''}${n.text ? `<p>${esc(n.text)}</p>` : ''}<div class="acts"><button class="mini" data-act="editnote" data-id="${esc(n.id)}">Bearbeiten</button><button class="mini" data-act="delnote" data-id="${esc(n.id)}">Löschen</button></div></div>`;
+}
+function markup(sec) {
+  const qs = S.notes.filter(n => n.sec === sec.id && n.quote).map(n => esc(n.quote));
+  return sec.text.split(/\n\n+/).map(p => {
+    let h = esc(p);
+    for (const q of qs) { const i = h.indexOf(q); if (i >= 0) h = h.slice(0, i) + '<mark>' + q + '</mark>' + h.slice(i + q.length); }
+    return '<p>' + h + '</p>';
+  }).join('');
+}
+function globalProv(mode) {
+  const l = S.prov.filter(p => p.mode === mode && p.sec === 'gesamt');
+  return l.length ? '<h2>Zum Ganzen</h2><div class="margin">' + l.map(card).join('') + '</div>' : '';
+}
+function stats(mode) {
+  const l = S.prov.filter(p => p.mode === mode);
+  if (!l.length) return '';
+  const c = k => l.filter(p => p.status === k).length;
+  return `<p class="meta">Denkanstösse: ${c('aufgegriffen')} aufgegriffen, ${c('verworfen')} verworfen, ${c('offen')} offen. Ein begründet verworfener Denkanstoss ist auch ein Ergebnis.</p>`;
+}
+const banner = () => S.sample ? '<div class="banner">Beispielinhalt zum Ausprobieren. Öffne eine eigene Datei oder <button class="link" data-act="reset">beginne neu</button>.</div>' : '';
+
+function marginRead(id) {
+  return S.prov.filter(p => p.mode === 'lesen' && p.sec === id).map(card).join('') + S.notes.filter(n => n.sec === id).map(noteCard).join('') + `<button class="mini" data-act="addnote" data-sec="${esc(id)}">Notiz hinzufügen</button>`;
+}
+function marginFazit() {
+  if (!S.cmp) return '<p class="meta">Hier erscheint nach dem Abgleich, was du gut erfasst hast. Lücken und andere Lesarten stehen am Rand der betreffenden Abschnitte.</p>';
+  return (S.cmp.getroffen.length ? `<div class="note good"><span class="tag">Gut erfasst</span><ul>${S.cmp.getroffen.map(g => '<li>' + esc(g) + '</li>').join('')}</ul></div>` : '') +
+    (S.cmp.frage ? `<div class="note prov"><span class="tag">Frage an dich</span><p>${esc(S.cmp.frage)}</p></div>` : '');
+}
+function readHTML() {
+  const secs = S.doc.sections;
+  const mapList = !secs.length ? '<p class="meta">Noch kein Dokument geladen.</p>' :
+    (Object.keys(S.map).length ? '' : '<p class="meta">Nach dem Erstellen stehen hier Titel und unter jeder Überschrift eine Linse.</p>') +
+    `<ol class="map">${secs.map((s, i) => {
+      const o = S.prov.filter(p => p.mode === 'lesen' && p.sec === s.id && p.status === 'offen').length, n = S.notes.filter(x => x.sec === s.id).length;
+      const info = [o ? o + (o > 1 ? ' Denkanstösse' : ' Denkanstoss') : '', n ? n + (n > 1 ? ' Notizen' : ' Notiz') : ''].filter(Boolean).join(', ');
+      return `<li><button data-act="goto" data-sec="${esc(s.id)}"><b>${esc(secTitle(s, i))}</b>${info ? `<span>${info}</span>` : ''}</button></li>`;
+    }).join('')}</ol>`;
+  const side = `<aside class="side">${banner()}
+    <section class="panel"><h2>Wozu liest du?</h2>
+      <label for="purpose">Mein Leseziel</label><textarea id="purpose" rows="3" data-bind="purpose" placeholder="Was willst du nach dem Lesen wissen oder entscheiden?">${esc(S.purpose)}</textarea>
+      <label for="lens">Linse</label><input id="lens" type="text" list="lenses" data-bind="lens" value="${esc(S.lens)}" placeholder="Worauf soll die Landkarte achten?">
+      <datalist id="lenses">${LENSES.map(l => `<option value="${esc(l)}">`).join('')}</datalist>
+      <div class="row"><button class="btn" data-act="map"${secs.length ? '' : ' disabled'}>Landkarte erstellen</button></div></section>
+    <section class="panel"><h2>Landkarte</h2>${mapList}</section>
+    <section class="panel"><h2>Meine Notizen <span class="count">${S.notes.length}</span></h2>${S.notes.length ? `<ul class="nlist">${S.notes.map(n => `<li><button data-act="goto" data-sec="${esc(n.sec)}">${esc(short(n.text || n.quote, 80))}</button></li>`).join('')}</ul>` : '<p class="meta">Markiere Stellen im Text, um sie hier zu sammeln.</p>'}</section>
+    <section class="panel" id="globalprov">${globalProv('lesen')}</section></aside>`;
+  const doc = secs.length ? `<div class="doc" id="doc"><div class="dochead"><h2>${esc(S.doc.title || 'Dokument')}</h2><p class="meta">${secs.length} Abschnitte. Lies, was für dein Ziel zählt, und markiere mit der Maus Stellen für deine Notizen.</p></div>
+    ${secs.map((s, i) => { const m = S.map[s.id]; return `<section class="sec" id="sec-${esc(s.id)}" data-sec="${esc(s.id)}"><div class="body"><h3>${esc(secTitle(s, i))}</h3>${m && m.linse ? `<p class="lens">${esc(m.linse)}</p>` : ''}<div class="txt">${markup(s)}</div></div><div class="margin" data-margin="${esc(s.id)}">${marginRead(s.id)}</div></section>`; }).join('')}
+    <section class="sec" id="sec-fazit"><div class="body"><h3>Meine Kernpunkte</h3><p class="meta">Halte in eigenen Worten fest, was du mitnimmst. Erst danach gleicht die KI mit dem Text ab.</p>
+      <textarea id="kern" rows="7" data-bind="kern" placeholder="Was ist für dein Leseziel wichtig? Was überzeugt dich, was nicht?">${esc(S.kern)}</textarea>
+      <div class="row"><button class="btn" data-act="compare">Mit dem Text abgleichen</button><button class="btn ghost" data-act="mode" data-v="schreiben">Weiter zum Schreiben</button></div>${stats('lesen')}</div>
+      <div class="margin" data-margin="fazit">${marginFazit()}</div></section></div>`
+    : `<div class="doc"><div class="empty" id="drop"><h2>Was willst du lesen?</h2><p>Öffne eine PDF-, Word-, Text- oder Markdown-Datei, ziehe sie hierher oder füge Text ein. Die Datei wird in deinem Browser gelesen. An die KI gehen nur die Textabschnitte, und erst wenn du eine Funktion auslöst.</p>
+      <div class="row"><label class="btn" for="file">Datei öffnen</label><button class="btn ghost" data-act="paste">Text einfügen</button></div>
+      <p class="meta">Gescannte PDFs ohne Textebene und alte .doc-Dateien gehen nicht. Speichere solche Dateien als .docx oder als PDF mit Text.</p></div></div>`;
+  return `<div class="wrap">${side}${doc}</div>`;
+}
+function marginWrite(id) {
+  const v = S.variants[id];
+  const vars = v && v.items.length ? v.items.map((it, i) => `<div class="note var${v.neu ? ' new' : ''}"><span class="tag">${esc(it.label)}</span><p>${esc(it.text)}</p><div class="acts">${v.draft
+    ? `<button class="mini" data-act="usevar" data-part="${esc(id)}" data-i="${i}" data-how="replace">Ersetzen</button><button class="mini" data-act="usevar" data-part="${esc(id)}" data-i="${i}" data-how="append">Anhängen</button>`
+    : `<button class="mini" data-act="usevar" data-part="${esc(id)}" data-i="${i}">Übernehmen</button>`}</div></div>`).join('') + `<button class="link" data-act="closevar" data-part="${esc(id)}">${v.draft ? 'Entwurf verwerfen' : 'Keine davon'}</button>` : '';
+  return vars + S.prov.filter(p => p.mode === 'schreiben' && p.sec === id).map(card).join('');
+}
+function writeHTML() {
+  const w = S.w, mats = S.notes.map((n, i) => ({ i, label: n.quote ? '«' + short(n.quote, 70) + '»' + (n.text ? ' ' + short(n.text, 50) : '') : short(n.text, 100) }));
+  const side = `<aside class="side">${banner()}
+    <section class="panel"><h2>Auftrag</h2>
+      <label for="wt">Arbeitstitel</label><input id="wt" type="text" data-wbind="titel" value="${esc(w.titel)}">
+      <label for="wz">Was soll der Text bewirken?</label><textarea id="wz" rows="3" data-wbind="ziel">${esc(w.ziel)}</textarea>
+      <label for="wp">Für wen?</label><input id="wp" type="text" data-wbind="publikum" value="${esc(w.publikum)}">
+      <label for="wk">Kernaussage in einem Satz</label><textarea id="wk" rows="3" data-wbind="kern">${esc(w.kern)}</textarea></section>
+    <section class="panel"><h2>Denkanstösse holen</h2><div class="row"><button class="btn ghost" data-act="outline">Gliederung prüfen</button><button class="btn" data-act="review">Text prüfen</button></div>
+      <label class="check"><input type="checkbox" id="auto" data-act="auto"${S.auto ? ' checked' : ''}> Beim Schreiben automatisch</label><p class="meta">Höchstens alle 90 Sekunden und nur nach grösseren Änderungen.</p></section>
+    <section class="panel"><h2>Material aus dem Lesen</h2>${mats.length || S.kern ? `<p class="meta">Klicke, um es in die Stichworte des aktiven Abschnitts zu übernehmen.</p><div class="chips">${S.kern ? '<button class="chip" data-act="usemat" data-i="kern">Meine Kernpunkte</button>' : ''}${mats.map(m => `<button class="chip" data-act="usemat" data-i="${m.i}">${esc(m.label)}</button>`).join('')}</div>` : '<p class="meta">Noch nichts gesammelt. Notizen und Markierungen aus dem Lesemodus erscheinen hier.</p>'}</section>
+    <section class="panel" id="globalprov">${globalProv('schreiben')}</section></aside>`;
+  const parts = w.parts.map((p, i) => { const id = esc(p.id); return `<section class="sec part" data-part="${id}"><div class="body">
+      <input class="h" type="text" aria-label="Überschrift Abschnitt ${i + 1}" data-pbind="h" value="${esc(p.h)}" placeholder="Überschrift von Abschnitt ${i + 1}">
+      <label for="st-${id}">Deine Stichworte und Entscheidungen</label><textarea id="st-${id}" class="stich" rows="3" data-pbind="stich" placeholder="Was gehört hier hinein? Welche Reihenfolge, welches Beispiel?">${esc(p.stich)}</textarea>
+      <label for="tx-${id}">Text</label><textarea id="tx-${id}" class="prose" rows="6" data-pbind="text" placeholder="${S.level === 'stark' ? 'Schreib selbst. Die KI fragt nach, wenn du den Text prüfen lässt.' : 'Schreib selbst oder lass einen Absatz aus deinen Stichworten entwerfen.'}">${esc(p.text)}</textarea>
+      <div class="row">${S.level === 'stark' ? '' : '<button class="mini" data-act="draft">Absatz aus meinen Stichworten</button>'}<button class="mini" data-act="variants">Varianten</button><button class="mini" data-act="move" data-d="-1"${i ? '' : ' disabled'}>Nach oben</button><button class="mini" data-act="move" data-d="1"${i < w.parts.length - 1 ? '' : ' disabled'}>Nach unten</button><button class="mini" data-act="delpart"${w.parts.length > 1 ? '' : ' disabled'}>Entfernen</button></div></div>
+      <div class="margin" data-margin="${id}">${marginWrite(p.id)}</div></section>`; }).join('');
+  const all = w.parts.reduce((a, p) => a + words(p.text), 0);
+  const doc = `<div class="doc"><div class="dochead"><h2>${esc(w.titel || 'Mein Text')}</h2><p class="meta">Du baust die Gliederung und entscheidest, was in jeden Abschnitt gehört. ${S.level === 'stark' ? 'Auf Stufe stark schreibst du selbst, die KI stellt nur Fragen.' : 'Die KI formuliert nur auf Grundlage deiner Stichworte.'}</p></div>
+    ${parts}<div class="row"><button class="btn ghost" data-act="addpart">Abschnitt hinzufügen</button></div>
+    <section class="sec"><div class="body"><h3>Abschluss</h3><p class="meta">${all} Wörter${w.aiw ? ', davon ungefähr ' + Math.min(all, w.aiw) + ' aus übernommenen Entwürfen oder Varianten' : ''}.</p>${stats('schreiben')}
+      <ul class="refl"><li>Welche Entscheidung in diesem Text ist ganz deine?</li><li>Welchen Denkanstoss hast du verworfen, und warum zu Recht?</li><li>Woran würdest du merken, dass der Text sein Ziel verfehlt?</li></ul>
+      <label for="refl">Notiz an mich</label><textarea id="refl" rows="3" data-wbind="refl">${esc(w.refl)}</textarea>
+      <div class="row"><button class="btn" data-act="copy">Text kopieren (Markdown)</button><button class="btn ghost" data-act="download" id="dlbtn" hidden>Als .md speichern</button></div></div><div class="margin"></div></section></div>`;
+  return `<div class="wrap">${side}${doc}</div>`;
+}
+let DL = null;
+function render() {
+  const c = cfg();
+  if (HINT[c.stufe]) { S.level = c.stufe; $('.seg[aria-label=Stufe]').hidden = true; }
+  if (Array.isArray(c.modi) && c.modi.length === 1) { S.mode = c.modi[0]; $('.seg[aria-label=Modus]').hidden = true; }
+  document.querySelectorAll('[data-act=mode]').forEach(b => { if (b.closest('.seg')) b.setAttribute('aria-pressed', b.dataset.v === S.mode); });
+  document.querySelectorAll('[data-act=level]').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.level));
+  $('#levelhint').textContent = HINT[S.level];
+  $('#app').innerHTML = S.mode === 'lesen' ? readHTML() : writeHTML();
+  const d = $('#dlbtn'); if (d) d.hidden = !DL;
+  clearNew();
+}
+function updateMargins() {
+  document.querySelectorAll('[data-margin]').forEach(m => { const id = m.dataset.margin; m.innerHTML = S.mode === 'lesen' ? (id === 'fazit' ? marginFazit() : marginRead(id)) : marginWrite(id); });
+  const g = $('#globalprov'); if (g) g.innerHTML = globalProv(S.mode);
+  clearNew();
+}
+function clearNew() { setTimeout(() => { S.prov.forEach(p => { delete p.neu; }); Object.values(S.variants).forEach(v => { delete v.neu; }); }, 800); }
+let msgT;
+function msg(t, ms = 6000) { $('#msg').textContent = t; clearTimeout(msgT); if (ms) msgT = setTimeout(() => { $('#msg').textContent = ''; }, ms); }
+function showErr(e) {
+  const c = e && e.code;
+  if (c === 'no_cfg') { msg((e && e.message) || 'Richte zuerst die KI ein: Anbieter, Modell und API-Schlüssel.', 9000); openSettings(); return; }
+  msg(c === 'no_ai' ? 'Claude ist in dieser Ansicht nicht verfügbar. Wähle unter «KI» einen anderen Anbieter.'
+    : c === 'not_granted' ? 'Der Zugriff auf Claude wurde nicht erlaubt.' : c === 'rate_limited' ? 'Gerade zu viele Anfragen. Bitte einen Moment warten.'
+    : (e && e.message) || 'Etwas ist schiefgegangen.', 9000);
+}
+function dialog(o) {
+  return new Promise(res => {
+    const d = $('#dlg'), ta = $('#dlgta');
+    $('#dlgt').textContent = o.title; $('#dlgp').textContent = o.text || '';
+    ta.hidden = !o.input; ta.value = o.value || ''; ta.placeholder = o.placeholder || ''; ta.rows = o.big ? 12 : 5;
+    $('#dlgok').textContent = o.ok || 'Übernehmen';
+    const done = v => { try { d.close(); } catch (e) { d.removeAttribute('open'); } $('#dlgok').onclick = $('#dlgno').onclick = d.oncancel = null; res(v); };
+    $('#dlgok').onclick = () => done(o.input ? ta.value.trim() : '');
+    $('#dlgno').onclick = () => done(null);
+    d.oncancel = e => { e.preventDefault(); done(null); };
+    try { d.showModal(); } catch (e) { d.setAttribute('open', ''); }
+    if (o.input) setTimeout(() => ta.focus(), 30);
+  });
+}
+async function run(b, fn) {
+  if (b.disabled) return;
+  const t = b.textContent; b.disabled = true; b.textContent = 'Denke nach …';
+  try { await fn(); } catch (e) { showErr(e); }
+  finally { if (b.isConnected) { b.disabled = false; b.textContent = t; } }
+}
+
+/* ---------- Aktionen ---------- */
+function payloadSections() {
+  const all = S.doc.sections, total = all.reduce((a, s) => a + s.text.length, 0), LIM = 60000;
+  const per = total > LIM ? Math.floor(LIM / all.length) : Infinity;
+  return { cut: total > LIM, secs: all.map(s => ({ id: s.id, ueberschrift: s.head || '', text: s.text.length > per ? s.text.slice(0, per) + ' […]' : s.text })) };
+}
+function addProv(mode, list, src) {
+  const ids = new Set(mode === 'lesen' ? S.doc.sections.map(s => s.id) : S.w.parts.map(p => p.id));
+  arr(list).forEach(a => {
+    if (!a || !a.text) return;
+    S.prov.push({ id: uid('k'), mode, src, sec: ids.has(a.id) ? a.id : 'gesamt', art: String(a.art || 'Denkanstoss'), text: String(a.text), schritt: String(a.schritt || ''), status: 'offen', grund: '', neu: true });
+  });
+}
+async function doMap() {
+  if (S.level !== 'leicht' && words(S.purpose) < 3) throw { message: 'Formuliere zuerst kurz dein Leseziel, ein Satz genügt. Es bestimmt, worauf die Landkarte achtet.' };
+  const { secs, cut } = payloadSections();
+  const r = await ai('karte', { leseziel: S.purpose || 'nicht angegeben', linse: S.lens || 'keine besondere', abschnitte: secs });
+  S.map = {};
+  arr(r.abschnitte).forEach(a => { if (a && a.id) S.map[a.id] = { titel: String(a.titel || ''), linse: String(a.linse || '') }; });
+  S.prov = S.prov.filter(p => !(p.mode === 'lesen' && p.src === 'karte' && p.status === 'offen'));
+  addProv('lesen', r.anstoesse, 'karte');
+  save(); render();
+  msg(cut ? 'Landkarte erstellt. Das Dokument ist lang: Die KI sah pro Abschnitt nur den Anfang.' : 'Landkarte erstellt. Lies die Abschnitte, die für dein Ziel zählen, selbst.');
+}
+async function doCompare() {
+  const min = S.level === 'leicht' ? 5 : 25;
+  if (words(S.kern) < min) throw { message: S.level === 'leicht' ? 'Schreib zuerst ein paar Stichworte zu deinen Kernpunkten.' : 'Schreib zuerst deine Kernpunkte in eigenen Worten, etwa drei, vier Sätze. Der Abgleich hilft erst, wenn es etwas zu vergleichen gibt.' };
+  const r = await ai('abgleich', { leseziel: S.purpose, kernpunkte: S.kern, notizen: S.notes.map(n => ({ abschnitt: n.sec, stelle: n.quote, notiz: n.text })), abschnitte: payloadSections().secs });
+  S.cmp = { getroffen: arr(r.getroffen).map(String), frage: String(r.frage || '') };
+  S.prov = S.prov.filter(p => !(p.src === 'abgleich' && p.status === 'offen'));
+  addProv('lesen', arr(r.luecken).map(x => Object.assign({}, x, { art: 'Lücke' })), 'abgleich');
+  addProv('lesen', arr(r.lesarten).map(x => Object.assign({}, x, { art: 'Andere Lesart' })), 'abgleich');
+  save(); render();
+  const f = document.getElementById('sec-fazit'); if (f) f.scrollIntoView({ block: 'start' });
+  msg('Abgleich fertig. Lücken und andere Lesarten stehen am Rand der betreffenden Abschnitte.');
+}
+async function doDraft(id) {
+  const p = part(id);
+  if (words(p.stich) < (S.level === 'leicht' ? 2 : 6)) throw { message: 'Notiere zuerst in Stichworten, was in diesen Abschnitt gehört. Die KI formuliert nur, was du entschieden hast.' };
+  const i = S.w.parts.indexOf(p), prev = i > 0 ? S.w.parts[i - 1].text.slice(-600) : '';
+  const r = await ai('absatz', { ziel: S.w.ziel, publikum: S.w.publikum, kernaussage: S.w.kern, ueberschrift: p.h, stichworte: p.stich, gliederung: S.w.parts.map(x => x.h || '(ohne Titel)'), vorheriger_abschnitt_ende: prev });
+  const t = String(r.text || '').trim();
+  if (!t) throw { message: 'Die KI hat keinen Text geliefert. Bitte nochmals versuchen.' };
+  if (!p.text.trim()) { p.text = t; S.w.aiw += words(t); }
+  else S.variants[id] = { items: [{ label: 'Entwurf aus deinen Stichworten', text: t }], base: p.text, range: null, draft: true, neu: true };
+  if (r.offen) addProv('schreiben', [{ id, art: 'Offen', text: r.offen, schritt: '' }], 'absatz');
+  save(); render();
+}
+async function doVariants(id) {
+  const p = part(id), ta = document.getElementById('tx-' + id);
+  const s = ta ? ta.selectionStart : 0, e = ta ? ta.selectionEnd : 0, sel = ta && e > s ? p.text.slice(s, e) : '';
+  const base = sel || p.text;
+  if (words(base) < 6) throw { message: 'Für Varianten braucht es zuerst etwas Text. Du kannst auch eine Stelle im Text markieren.' };
+  const r = await ai('varianten', { ziel: S.w.ziel, publikum: S.w.publikum, text: base, ist_auszug: !!sel }, 'quick');
+  const items = arr(r.varianten).filter(v => v && v.text).slice(0, 3).map(v => ({ label: String(v.label || 'Variante'), text: String(v.text) }));
+  if (!items.length) throw { message: 'Keine Varianten erhalten. Bitte nochmals versuchen.' };
+  S.variants[id] = { items, base, range: sel ? [s, e] : null, neu: true };
+  save(); updateMargins();
+}
+let busyAuto = false, autoT, lastAuto = 0, lastWords = -1;
+async function doReview(auto) {
+  if (!S.w.parts.some(p => words(p.text))) { if (auto) return; throw { message: 'Es gibt noch keinen Text zum Prüfen.' }; }
+  const max = auto ? 2 : S.level === 'leicht' ? 3 : 5;
+  const r = await ai('pruefen', { ziel: S.w.ziel, publikum: S.w.publikum, kernaussage: S.w.kern, max, abschnitte: S.w.parts.map(p => ({ id: p.id, ueberschrift: p.h, stichworte: p.stich, text: p.text })), bereits: S.prov.filter(p => p.mode === 'schreiben').slice(-12).map(p => p.text) }, auto ? 'quick' : 'default');
+  if (!auto) S.prov = S.prov.filter(p => !(p.mode === 'schreiben' && p.src === 'pruefen' && p.status === 'offen'));
+  addProv('schreiben', arr(r.anstoesse).slice(0, max), auto ? 'auto' : 'pruefen');
+  save(); updateMargins();
+  if (!auto) msg('Denkanstösse stehen am Rand der betreffenden Abschnitte.');
+}
+function autoTick() {
+  if (!S.auto) return;
+  clearTimeout(autoT);
+  autoT = setTimeout(async () => {
+    const w = S.w.parts.reduce((a, p) => a + words(p.text), 0);
+    if (lastWords < 0) lastWords = w;
+    if (busyAuto || Math.abs(w - lastWords) < 40 || Date.now() - lastAuto < 90000) return;
+    busyAuto = true; lastWords = w; lastAuto = Date.now();
+    try { await doReview(true); } catch (e) {} finally { busyAuto = false; }
+  }, 6000);
+}
+async function doOutline() {
+  if (S.w.parts.filter(p => p.h || p.stich).length < 2) throw { message: 'Lege zuerst mindestens zwei Abschnitte mit Überschrift oder Stichworten an.' };
+  const r = await ai('gliederung', { ziel: S.w.ziel, publikum: S.w.publikum, kernaussage: S.w.kern, abschnitte: S.w.parts.map(p => ({ id: p.id, ueberschrift: p.h, stichworte: p.stich })) });
+  S.prov = S.prov.filter(p => !(p.src === 'gliederung' && p.status === 'offen'));
+  addProv('schreiben', arr(r.anstoesse).slice(0, 4), 'gliederung');
+  save(); updateMargins();
+  msg('Denkanstösse zur Gliederung stehen am Rand und unter «Zum Ganzen».');
+}
+const mdOut = () => ['# ' + (S.w.titel || 'Mein Text')].concat(...S.w.parts.map(p => [p.h ? '## ' + p.h : '', p.text].filter(Boolean))).join('\n\n');
+const pidOf = b => b.dataset.part || b.closest('[data-part]').dataset.part;
+let selInfo = null;
+const H = {
+  settings() { openSettings(); },
+  mode(b) { S.mode = b.dataset.v; save(); render(); window.scrollTo(0, 0); },
+  level(b) { S.level = b.dataset.v; save(); render(); },
+  async paste() {
+    const v = await dialog({ title: 'Text einfügen', text: 'Füge den Text ein, den du lesen willst.', input: true, big: true, ok: 'Laden' });
+    if (v) { try { loadText('Eingefügter Text', v); } catch (e) { showErr(e); } }
+  },
+  async reset() {
+    if (!S.sample && await dialog({ title: 'Neu beginnen?', text: 'Dokument, Notizen, Denkanstösse und dein Text werden aus dieser Werkstatt gelöscht.', ok: 'Neu beginnen' }) === null) return;
+    S = blank(S.level); save(); render(); window.scrollTo(0, 0);
+  },
+  map: b => run(b, doMap),
+  compare: b => run(b, doCompare),
+  goto(b) { const el = document.getElementById('sec-' + b.dataset.sec); if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); },
+  async addnote(b) {
+    const v = await dialog({ title: 'Notiz zu diesem Abschnitt', input: true, placeholder: 'Was denkst du dazu?' });
+    if (v) { S.notes.push({ id: uid('n'), sec: b.dataset.sec, quote: '', text: v }); save(); render(); }
+  },
+  async editnote(b) {
+    const n = S.notes.find(x => x.id === b.dataset.id); if (!n) return;
+    const v = await dialog({ title: 'Notiz bearbeiten', input: true, value: n.text });
+    if (v !== null) { n.text = v; save(); render(); }
+  },
+  delnote(b) { S.notes = S.notes.filter(x => x.id !== b.dataset.id); save(); render(); },
+  async take(b) {
+    const p = P(b.dataset.id); if (!p) return;
+    const v = await dialog({ title: 'Aufgreifen', text: p.mode === 'lesen' ? 'Was machst du daraus? Wird als Notiz gespeichert (optional).' : 'Wie greifst du ihn auf? Wird in deine Stichworte übernommen (optional).', input: true });
+    if (v === null) return;
+    p.status = 'aufgegriffen';
+    if (p.mode === 'lesen') S.notes.push({ id: uid('n'), sec: p.sec === 'gesamt' ? (S.doc.sections[0] || {}).id : p.sec, quote: '', text: v || p.text });
+    else { const q = part(p.sec) || part(S.focusPart) || S.w.parts[0]; if (q) q.stich = (q.stich ? q.stich.replace(/\s*$/, '') + '\n' : '') + '- ' + (v || p.schritt || p.text); }
+    save(); render();
+  },
+  async drop(b) {
+    const p = P(b.dataset.id); if (!p) return;
+    const v = await dialog({ title: 'Verwerfen', text: 'Warum passt der Denkanstoss nicht? Ein Grund hilft dir später beim Reflektieren (optional).', input: true, ok: 'Verwerfen' });
+    if (v === null) return;
+    p.status = 'verworfen'; p.grund = v; save(); updateMargins();
+  },
+  undo(b) { const p = P(b.dataset.id); if (p) { p.status = 'offen'; p.grund = ''; save(); updateMargins(); } },
+  addpart() { S.w.parts.push(np()); save(); render(); },
+  async delpart(b) {
+    const id = pidOf(b), p = part(id);
+    if (S.w.parts.length < 2) return;
+    if ((p.text || p.stich) && await dialog({ title: 'Abschnitt entfernen?', text: 'Stichworte und Text dieses Abschnitts gehen verloren.', ok: 'Entfernen' }) === null) return;
+    S.w.parts = S.w.parts.filter(x => x.id !== id); S.prov = S.prov.filter(x => x.sec !== id); delete S.variants[id]; save(); render();
+  },
+  move(b) {
+    const ps = S.w.parts, i = ps.findIndex(x => x.id === pidOf(b)), j = i + Number(b.dataset.d);
+    if (j < 0 || j >= ps.length) return;
+    [ps[i], ps[j]] = [ps[j], ps[i]]; save(); render();
+  },
+  draft: b => run(b, () => doDraft(pidOf(b))),
+  variants: b => run(b, () => doVariants(pidOf(b))),
+  usevar(b) {
+    const id = pidOf(b), v = S.variants[id], p = part(id); if (!v || !p) return;
+    const it = v.items[Number(b.dataset.i)]; if (!it) return;
+    if (b.dataset.how === 'append') p.text = p.text.replace(/\s*$/, '') + '\n\n' + it.text;
+    else if (v.range && p.text.slice(v.range[0], v.range[1]) === v.base) p.text = p.text.slice(0, v.range[0]) + it.text + p.text.slice(v.range[1]);
+    else { const k = p.text.indexOf(v.base); p.text = k >= 0 ? p.text.slice(0, k) + it.text + p.text.slice(k + v.base.length) : it.text; }
+    S.w.aiw += words(it.text); delete S.variants[id]; save(); render();
+  },
+  closevar(b) { delete S.variants[pidOf(b)]; save(); updateMargins(); },
+  outline: b => run(b, doOutline),
+  review: b => run(b, () => doReview(false)),
+  auto(b) { S.auto = b.checked; lastWords = -1; save(); if (S.auto) autoTick(); },
+  usemat(b) {
+    const q = part(S.focusPart) || S.w.parts[0]; if (!q) return;
+    let t;
+    if (b.dataset.i === 'kern') t = S.kern;
+    else { const n = S.notes[Number(b.dataset.i)]; if (!n) return; t = n.quote ? '«' + n.quote + '»' + (n.text ? ' (' + n.text + ')' : '') : n.text; }
+    q.stich = (q.stich ? q.stich.replace(/\s*$/, '') + '\n' : '') + '- ' + t;
+    const ta = document.getElementById('st-' + q.id); if (ta) ta.value = q.stich;
+    save(); msg('In die Stichworte von «' + (q.h || 'Abschnitt') + '» übernommen.');
+  },
+  async copy() {
+    const t = mdOut();
+    try { await navigator.clipboard.writeText(t); msg('Text kopiert.'); }
+    catch (e) { await dialog({ title: 'Zum Kopieren', text: 'Markiere den Text und kopiere ihn.', input: true, big: true, value: t, ok: 'Schliessen' }); }
+  },
+  async download() {
+    if (!DL) return;
+    const name = (S.w.titel || 'mein-text').toLowerCase().replace(/[^a-z0-9äöü]+/g, '-').replace(/^-|-$/g, '') || 'mein-text';
+    try { await DL.save({ filename: name + '.md', data: mdOut() }); msg('Gespeichert.'); } catch (e) { msg('Nicht gespeichert.'); }
+  },
+  selmark() {
+    if (!selInfo) return;
+    S.notes.push({ id: uid('n'), sec: selInfo.sec, quote: selInfo.quote, text: '' });
+    try { getSelection().removeAllRanges(); } catch (e) {}
+    $('#selbar').hidden = true; save(); render();
+  },
+  async selnote() {
+    if (!selInfo) return;
+    const info = selInfo;
+    const v = await dialog({ title: 'Notiz zur markierten Stelle', text: '«' + short(info.quote, 160) + '»', input: true, placeholder: 'Was denkst du dazu?' });
+    if (v === null) return;
+    S.notes.push({ id: uid('n'), sec: info.sec, quote: info.quote, text: v });
+    $('#selbar').hidden = true; save(); render();
+  }
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (b && H[b.dataset.act] && !(b.tagName === 'LABEL')) H[b.dataset.act](b, e);
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.bind) { S[t.dataset.bind] = t.value; save(); }
+  else if (t.dataset.wbind) { S.w[t.dataset.wbind] = t.value; save(); if (t.dataset.wbind === 'titel') { const h = $('.dochead h2'); if (h) h.textContent = t.value || 'Mein Text'; } }
+  else if (t.dataset.pbind) { const p = part(t.closest('[data-part]').dataset.part); if (p) { p[t.dataset.pbind] = t.value; save(); if (t.dataset.pbind === 'text') autoTick(); } }
+});
+document.addEventListener('focusin', e => { const s = e.target.closest && e.target.closest('[data-part]'); if (s) S.focusPart = s.dataset.part; });
+$('#file').addEventListener('change', e => { importFile(e.target.files[0]); e.target.value = ''; });
+$('#app').addEventListener('dragover', e => { e.preventDefault(); const d = $('#drop'); if (d) d.classList.add('over'); });
+$('#app').addEventListener('dragleave', () => { const d = $('#drop'); if (d) d.classList.remove('over'); });
+$('#app').addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) importFile(f); });
+const bar = $('#selbar');
+bar.addEventListener('mousedown', e => e.preventDefault());
+let selT;
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selT);
+  selT = setTimeout(() => {
+    if (S.mode !== 'lesen') { bar.hidden = true; return; }
+    const sel = getSelection(), t = sel && !sel.isCollapsed ? sel.toString().replace(/\s+/g, ' ').trim() : '';
+    const n = sel && sel.anchorNode, el = n && (n.nodeType === 1 ? n : n.parentElement);
+    const sec = el && el.closest && el.closest('.txt') && el.closest('[data-sec]');
+    if (t.length >= 3 && sec) { selInfo = { sec: sec.dataset.sec, quote: t.slice(0, 600) }; $('#selq').textContent = '«' + short(t, 70) + '»'; bar.hidden = false; }
+    else bar.hidden = true;
+  }, 150);
+});
+
+render();
+badge();
+if (!cfg().endpoint) {
+  if (location.protocol.startsWith('http') || srvUrl()) probeServer(srvUrl()).then(j => { ENV.server = j; badge(); });
+  capability('sample').then(s => { ENV.claude = !!s; badge(); });
+}
+capability('downloads').then(d => { DL = d; const b = $('#dlbtn'); if (b) b.hidden = !d; });
+}
+</script>
+</body>
+</html>
