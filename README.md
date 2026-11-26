@@ -5,6 +5,7 @@ Lesen und Schreiben mit Denkanstössen am Rand, ohne Chat. Nach Advait Sarkars A
 - **Lesen:** Leseziel und Linse festlegen, Landkarte statt Zusammenfassung, eigene Markierungen und Notizen, dann eigene Kernpunkte und erst danach der Abgleich mit dem Text.
 - **Schreiben:** eigene Gliederung und Stichworte, Absätze nur aus den eigenen Stichworten, Varianten zur Auswahl, Denkanstösse zum Entwurf, Reflexion am Schluss.
 - **Stufen:** leicht, mittel, stark (sokratisch, ohne Entwürfe).
+- **Projekte:** mehrere Projekte mit je einem Lesedokument und einem eigenen Text, mit Liste, Umbenennen und Löschen. Gespeichert wird nur im Browser.
 - **Dateien:** PDF mit Textebene, .docx, .txt, .md. Sie werden im Browser gelesen; an die KI gehen nur Textabschnitte, und erst wenn du eine Funktion auslöst.
 
 ## Aufbau

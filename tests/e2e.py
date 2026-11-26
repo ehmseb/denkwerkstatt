@@ -6,6 +6,7 @@ Prüft alle drei Verbindungsarten mit simulierten Antworten:
   B  Server-Modus über server.js mit Passwort und Modellwahl
   C  Direktmodus mit eigenem Schlüssel gegen einen OpenAI-kompatiblen Mock
   D  Textauswahl auf Touch-Geräten bei 390 px
+  E  Projekte: anlegen, wechseln, umbenennen, löschen, Übernahme alter Daten
 
 Vorbereitung (einmalig):
   cd tests && npm install
@@ -176,6 +177,47 @@ async def test_touch(browser):
     check('keine Skriptfehler', not errs, '; '.join(errs))
     await ctx.close()
 
+async def pj_names(pg):
+    if not await pg.is_visible('#pjdlg'): await pg.click('#pjbtn'); await pg.wait_for_timeout(200)
+    names = await pg.locator('#pjlist .nm b').all_text_contents()
+    return names
+
+async def test_projects(browser):
+    print('E  Projekte')
+    ctx = await new_ctx(browser, stub=True); pg = await ctx.new_page(); errs = watch(pg)
+    # Übernahme eines früheren Einzelzustands
+    await pg.goto(PAGE); await pg.wait_for_timeout(800)
+    await pg.evaluate("""()=>{localStorage.clear();const s={v:1,mode:'lesen',level:'mittel',sample:false,doc:{title:'Alter Text',sections:[{id:'s1',head:'',text:'Ein alter Absatz.'}]},purpose:'',lens:'',map:{},notes:[],prov:[],cmp:null,kern:'',auto:false,focusPart:'',w:{titel:'',ziel:'',publikum:'',kern:'',parts:[{id:'p1',h:'',stich:'',text:''}],aiw:0,refl:''},variants:{}};localStorage.setItem('denkwerkstatt-v1',JSON.stringify(s));}""")
+    await pg.reload(); await pg.wait_for_timeout(800)
+    check('früherer Zustand wird erstes Projekt', 'Alter Text' in await pg.inner_text('#app') and await pg.evaluate("localStorage.getItem('denkwerkstatt-v1')") is None)
+    check('Projektliste zeigt es', await pj_names(pg) == ['Alter Text'])
+    await pg.click('#pjdlg [data-act=pjnew]'); await pg.wait_for_timeout(300)
+    check('neues Projekt ist leer', await pg.is_visible('#drop') and not await pg.is_visible('#pjdlg'))
+    await pg.click('.tools [data-act=paste]'); await pg.fill('#dlgta', 'Zweiter Text, erster Absatz.\n\nZweiter Absatz.'); await pg.click('#dlgok'); await pg.wait_for_timeout(400)
+    await pg.fill('#purpose', 'Ziel im zweiten Projekt'); await pg.wait_for_timeout(500)
+    check('zwei Projekte, das offene zuerst', await pj_names(pg) == ['Eingefügter Text', 'Alter Text'])
+    await pg.click('#pjlist [data-act=pjopen]'); await pg.wait_for_timeout(300)
+    check('Wechsel öffnet das andere Projekt', 'Ein alter Absatz' in await pg.inner_text('#app') and await pg.input_value('#purpose') == '')
+    await pg.click('#pjbtn'); await pg.locator('#pjlist li').first.locator('[data-act=pjren]').click()
+    await pg.fill('#dlgta', 'Mein <b>Projekt</b>'); await pg.click('#dlgok'); await pg.wait_for_timeout(200)
+    check('Umbenennen über eigenen Dialog', (await pg.locator('#pjlist .nm b').first.text_content()) == 'Mein <b>Projekt</b>')
+    await pg.click('#pjclose')
+    await pg.reload(); await pg.wait_for_timeout(800)
+    check('nach Neuladen bleiben Projekte und Name', await pj_names(pg) == ['Mein <b>Projekt</b>', 'Eingefügter Text'])
+    await pg.click('#pjlist [data-act=pjopen]'); await pg.wait_for_timeout(300)
+    check('Zustand pro Projekt gespeichert', await pg.input_value('#purpose') == 'Ziel im zweiten Projekt')
+    await pg.click('#pjbtn'); await pg.locator('#pjlist li').first.locator('[data-act=pjdel]').click()
+    check('Löschen fragt im eigenen Dialog', await pg.is_visible('#dlg') and 'lässt sich nicht' in await pg.text_content('#dlgp'))
+    await pg.click('#dlgok'); await pg.wait_for_timeout(300)
+    keys = await pg.evaluate("Object.keys(localStorage).filter(k=>k.startsWith('denkwerkstatt-v1-p-')).length")
+    check('Löschen des offenen Projekts wechselt zum verbleibenden', await pj_names(pg) == ['Mein <b>Projekt</b>'] and keys == 1 and 'Ein alter Absatz' in await pg.inner_text('#app'))
+    await pg.locator('#pjlist [data-act=pjdel]').click(); await pg.click('#dlgok'); await pg.wait_for_timeout(300)
+    check('letztes Projekt löschen hinterlässt ein leeres', await pj_names(pg) == ['Ohne Titel'] and await pg.is_visible('#drop'))
+    await pg.set_viewport_size({'width': 390, 'height': 844})
+    check('Projektdialog ohne seitliches Scrollen bei 390px', await pg.evaluate("document.querySelector('#pjdlg').scrollWidth <= document.querySelector('#pjdlg').clientWidth"))
+    check('keine Skriptfehler', not errs, '; '.join(errs))
+    await ctx.close()
+
 def http(path, data=None, headers=None):
     req = urllib.request.Request(f'http://localhost:{SRV_PORT}{path}', data=json.dumps(data).encode() if data else None, headers=headers or {}, method='POST' if data else 'GET')
     try:
@@ -257,7 +299,7 @@ async def main():
                 kw = {'args': ['--no-sandbox']}
                 if os.environ.get('CHROME_PATH'): kw['executable_path'] = os.environ['CHROME_PATH']
                 browser = await p.chromium.launch(**kw)
-                await test_claude(browser, fx); await test_server(browser); await test_direct(browser); await test_touch(browser)
+                await test_claude(browser, fx); await test_server(browser); await test_direct(browser); await test_touch(browser); await test_projects(browser)
                 await browser.close()
     finally:
         for pr in procs: pr.terminate()
