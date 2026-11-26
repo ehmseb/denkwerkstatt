@@ -642,7 +642,7 @@ function readHTML() {
       <datalist id="lenses">${LENSES.map(l => `<option value="${esc(l)}">`).join('')}</datalist>
       <div class="row"><button class="btn" data-act="map"${secs.length ? '' : ' disabled'}>Landkarte erstellen</button></div></section>
     <section class="panel"><h2>Landkarte</h2>${mapList}</section>
-    <section class="panel"><h2>Meine Notizen <span class="count">${S.notes.length}</span></h2>${S.notes.length ? `<ul class="nlist">${S.notes.map(n => `<li><button data-act="goto" data-sec="${esc(n.sec)}">${esc(short(n.text || n.quote, 80))}</button></li>`).join('')}</ul>` : '<p class="meta">Markiere Stellen im Text, um sie hier zu sammeln.</p>'}</section>
+    <section class="panel"><h2>Meine Notizen <span class="count">${S.notes.length}</span></h2>${S.notes.length ? `<ul class="nlist">${S.notes.map(n => `<li><button data-act="goto" data-sec="${esc(n.sec)}">${esc(short(n.text || n.quote, 80))}</button></li>`).join('')}</ul>` : '<p class="meta">Markiere Stellen im Text, um sie hier zu sammeln.</p>'}${secs.length ? '<p class="meta">Notizen, Kernpunkte und Abgleich als Markdown, zum Beispiel für deine Unterlagen.</p><div class="row"><button class="mini" data-act="copyread">Notizen kopieren</button><button class="mini" data-act="dlread">Als .md speichern</button></div>' : ''}</section>
     <section class="panel" id="globalprov">${globalProv('lesen')}</section></aside>`;
   const doc = secs.length ? `<div class="doc" id="doc"><div class="dochead"><h2>${esc(S.doc.title || 'Dokument')}</h2><p class="meta">${secs.length} Abschnitte. Lies, was für dein Ziel zählt, und markiere mit der Maus Stellen für deine Notizen.</p></div>
     ${secs.map((s, i) => { const m = S.map[s.id]; return `<section class="sec" id="sec-${esc(s.id)}" data-sec="${esc(s.id)}"><div class="body"><h3>${esc(secTitle(s, i))}</h3>${m && m.linse ? `<p class="lens">${esc(m.linse)}</p>` : ''}<div class="txt">${markup(s)}</div></div><div class="margin" data-margin="${esc(s.id)}">${marginRead(s.id)}</div></section>`; }).join('')}
@@ -686,7 +686,7 @@ function writeHTML() {
     <section class="sec"><div class="body"><h3>Abschluss</h3><p class="meta">${all} Wörter${w.aiw ? ', davon ungefähr ' + Math.min(all, w.aiw) + ' aus übernommenen Entwürfen oder Varianten' : ''}.</p>${stats('schreiben')}
       <ul class="refl"><li>Welche Entscheidung in diesem Text ist ganz deine?</li><li>Welchen Denkanstoss hast du verworfen, und warum zu Recht?</li><li>Woran würdest du merken, dass der Text sein Ziel verfehlt?</li></ul>
       <label for="refl">Notiz an mich</label><textarea id="refl" rows="3" data-wbind="refl">${esc(w.refl)}</textarea>
-      <div class="row"><button class="btn" data-act="copy">Text kopieren (Markdown)</button><button class="btn ghost" data-act="download" id="dlbtn" hidden>Als .md speichern</button></div></div><div class="margin"></div></section></div>`;
+      <div class="row"><button class="btn" data-act="copy">Text kopieren (Markdown)</button><button class="btn ghost" data-act="download" id="dlbtn">Als .md speichern</button></div></div><div class="margin"></div></section></div>`;
   return `<div class="wrap">${side}${doc}</div>`;
 }
 let DL = null;
@@ -698,7 +698,6 @@ function render() {
   document.querySelectorAll('[data-act=level]').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.level));
   $('#levelhint').textContent = HINT[S.level];
   $('#app').innerHTML = S.mode === 'lesen' ? readHTML() : writeHTML();
-  const d = $('#dlbtn'); if (d) d.hidden = !DL;
   clearNew();
 }
 function updateMargins() {
@@ -826,6 +825,48 @@ async function doOutline() {
   msg('Denkanstösse zur Gliederung stehen am Rand und unter «Zum Ganzen».');
 }
 const mdOut = () => ['# ' + (S.w.titel || 'Mein Text')].concat(...S.w.parts.map(p => [p.h ? '## ' + p.h : '', p.text].filter(Boolean))).join('\n\n');
+const quoteMd = t => String(t).split('\n').map(l => '> ' + l).join('\n');
+function mdRead() {
+  const out = ['# Lesenotizen: ' + (S.doc.title || 'Dokument')];
+  if (S.purpose.trim()) out.push('**Leseziel:** ' + S.purpose.trim());
+  if (S.lens.trim()) out.push('**Linse:** ' + S.lens.trim());
+  out.push('## Meine Kernpunkte', S.kern.trim() || '(noch keine)');
+  if (S.cmp) {
+    out.push('## Abgleich mit dem Text');
+    if (S.cmp.getroffen.length) out.push('**Gut erfasst**\n\n' + S.cmp.getroffen.map(g => '- ' + g).join('\n'));
+    if (S.cmp.frage) out.push('**Frage an mich:** ' + S.cmp.frage);
+  }
+  const state = p => p.status === 'aufgegriffen' ? 'aufgegriffen' : p.status === 'verworfen' ? 'verworfen' + (p.grund ? ', weil: ' + p.grund : '') : 'offen';
+  const provMd = list => list.map(p => '- ' + p.art + ' (' + state(p) + '): ' + p.text).join('\n');
+  const parts = [];
+  S.doc.sections.forEach((s, i) => {
+    const notes = S.notes.filter(n => n.sec === s.id), prov = S.prov.filter(p => p.mode === 'lesen' && p.sec === s.id);
+    if (!notes.length && !prov.length) return;
+    parts.push('### ' + (s.head || (S.map[s.id] && S.map[s.id].titel) || 'Abschnitt ' + (i + 1)));
+    notes.forEach(n => parts.push([n.quote ? quoteMd(n.quote) : '', n.text].filter(Boolean).join('\n\n')));
+    if (prov.length) parts.push('**Denkanstösse**\n\n' + provMd(prov));
+  });
+  const glob = S.prov.filter(p => p.mode === 'lesen' && p.sec === 'gesamt');
+  if (glob.length) parts.push('### Zum ganzen Text', '**Denkanstösse**\n\n' + provMd(glob));
+  out.push('## Notizen nach Abschnitten', ...(parts.length ? parts : ['(noch keine)']));
+  return out.join('\n\n') + '\n';
+}
+const slug = (t, d) => String(t || '').toLowerCase().replace(/[^a-z0-9äöü]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || d;
+async function copyText(t, done) {
+  try { await navigator.clipboard.writeText(t); msg(done); }
+  catch (e) { await dialog({ title: 'Zum Kopieren', text: 'Markiere den Text und kopiere ihn.', input: true, big: true, value: t, ok: 'Schliessen' }); }
+}
+async function saveFile(filename, data) {
+  const d = DL || (window.claude ? await capability('downloads') : null);
+  try {
+    if (d) await d.save({ filename, data });
+    else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'text/markdown;charset=utf-8' })); a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    msg('Gespeichert als ' + filename + '.');
+  } catch (e) { msg('Nicht gespeichert.'); }
+}
 const pidOf = b => b.dataset.part || b.closest('[data-part]').dataset.part;
 let selInfo = null;
 const H = {
@@ -904,16 +945,10 @@ const H = {
     const ta = document.getElementById('st-' + q.id); if (ta) ta.value = q.stich;
     save(); msg('In die Stichworte von «' + (q.h || 'Abschnitt') + '» übernommen.');
   },
-  async copy() {
-    const t = mdOut();
-    try { await navigator.clipboard.writeText(t); msg('Text kopiert.'); }
-    catch (e) { await dialog({ title: 'Zum Kopieren', text: 'Markiere den Text und kopiere ihn.', input: true, big: true, value: t, ok: 'Schliessen' }); }
-  },
-  async download() {
-    if (!DL) return;
-    const name = (S.w.titel || 'mein-text').toLowerCase().replace(/[^a-z0-9äöü]+/g, '-').replace(/^-|-$/g, '') || 'mein-text';
-    try { await DL.save({ filename: name + '.md', data: mdOut() }); msg('Gespeichert.'); } catch (e) { msg('Nicht gespeichert.'); }
-  },
+  copy() { return copyText(mdOut(), 'Text kopiert.'); },
+  download() { return saveFile(slug(S.w.titel, 'mein-text') + '.md', mdOut()); },
+  copyread() { return copyText(mdRead(), 'Notizen kopiert.'); },
+  dlread() { return saveFile('notizen-' + slug(S.doc.title, 'dokument') + '.md', mdRead()); },
   selmark() {
     if (!selInfo) return;
     S.notes.push({ id: uid('n'), sec: selInfo.sec, quote: selInfo.quote, text: '' });
@@ -965,7 +1000,7 @@ if (!cfg().endpoint) {
   if (location.protocol.startsWith('http') || srvUrl()) probeServer(srvUrl()).then(j => { ENV.server = j; badge(); });
   capability('sample').then(s => { ENV.claude = !!s; badge(); });
 }
-capability('downloads').then(d => { DL = d; const b = $('#dlbtn'); if (b) b.hidden = !d; });
+capability('downloads').then(d => { DL = d; });
 }
 </script>
 </body>

@@ -128,6 +128,17 @@ async def test_claude(browser, fx: Path):
     check('Aufgreifen erzeugt Notiz', await pg.locator('.note.mine').count() >= 2)
     await pg.locator('[data-act=drop]').first.click(); await pg.click('#dlgok'); await pg.wait_for_timeout(200)
     check('Verwerfen markiert Anstoss', await pg.locator('.note.done').count() >= 2)
+    # Export aus dem Lesemodus
+    await pg.click('[data-act=dlread]'); await pg.wait_for_timeout(300)
+    dl = await pg.evaluate('window.__dl') or {}
+    md = dl.get('data') or ''
+    check('Lese-Export als .md', (dl.get('filename') or '').startswith('notizen-') and dl['filename'].endswith('.md'), dl.get('filename'))
+    check('Lese-Export enthält Leseziel, Kernpunkte, Abgleich und Notizen',
+          all(x in md for x in ('# Lesenotizen', '**Leseziel:** Ich will verstehen', '## Meine Kernpunkte', 'wort wort', 'Gut erfasst', '- Punkt A', 'meine Notiz', '> ')), md[:300])
+    check('Lese-Export hält verworfene Denkanstösse fest', 'verworfen' in md)
+    await ctx.grant_permissions(['clipboard-read', 'clipboard-write'])
+    await pg.click('[data-act=copyread]'); await pg.wait_for_timeout(300)
+    check('Lese-Export kopiert', (await pg.evaluate('navigator.clipboard.readText()')).startswith('# Lesenotizen'))
     await pg.click('[data-act=level][data-v=stark]'); await pg.click('.seg [data-v=schreiben]')
     check('Stufe stark: keine Entwürfe', await pg.locator('[data-act=draft]').count() == 0)
     check('keine Skriptfehler', not errs, '; '.join(errs))
@@ -179,6 +190,15 @@ async def test_direct(browser):
     check('Landkarte direkt', await pg.locator('.lens').count() >= 1)
     await pg.click('#ai'); await pg.fill('#ki-base', 'http://localhost:9/v1'); await pg.click('#ki-test'); await pg.wait_for_timeout(800)
     check('verständliche Meldung bei falscher Adresse', 'Keine Verbindung' in await pg.text_content('#ki-status'))
+    await pg.click('#ki-cancel')
+    async with pg.expect_download() as info:
+        await pg.click('[data-act=dlread]')
+    d = await info.value
+    check('Lese-Export ohne Claude als Datei', d.suggested_filename.startswith('notizen-') and '# Lesenotizen' in Path(await d.path()).read_text(encoding='utf-8'), d.suggested_filename)
+    await pg.click('.seg [data-v=schreiben]')
+    async with pg.expect_download() as info:
+        await pg.click('#dlbtn')
+    check('Text-Download ohne Claude', (await info.value).suggested_filename.endswith('.md'))
     check('keine Skriptfehler', not errs, '; '.join(errs))
     await ctx.close()
 
